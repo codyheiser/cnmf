@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+consensus non-negative matrix factorization (cNMF)
+
+@author: D Kotliar
+2019
+"""
 import numpy as np
 import pandas as pd
 import os, errno
@@ -8,13 +15,12 @@ import yaml
 import subprocess
 import scipy.sparse as sp
 
-
 from scipy.spatial.distance import squareform
 from sklearn.decomposition.nmf import non_negative_factorization
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.utils import sparsefuncs
-
+from sklearn.preprocessing import normalize
 
 from fastcluster import linkage
 from scipy.cluster.hierarchy import leaves_list
@@ -217,8 +223,57 @@ def compute_tpm(input_counts):
     Default TPM normalization
     """
     tpm = input_counts.copy()
-    sc.pp.normalize_per_cell(tpm, counts_per_cell_after=1e6)
+    sc.pp.normalize_total(tpm, target_sum=1e6)
     return tpm
+
+
+def compute_gficf(adata, layer=None, transform="arcsinh", norm=None):
+    """
+    return GF-ICF scores for each element in anndata counts matrix
+
+    Parameters:
+        adata (AnnData.AnnData): AnnData object
+        layer (str or None): name of layer to perform GF-ICF normalization on. if None, use AnnData.X
+        transform (str): how to transform ICF weights. arcsinh is recommended to retain counts of genes
+            expressed in all cells. log transform eliminates these genes from the dataset.
+        norm (str or None): normalization strategy following GF-ICF transform.
+            None: do not normalize GF-ICF scores
+            "l1": divide each score by sum of scores for each cell (analogous to sc.pp.normalize_total)
+            "l2": divide each score by sqrt of sum of squares of scores for each cell
+
+    Returns:
+        AnnData.AnnData: adata is edited in place to add GF-ICF normalization to .layers["gf_icf"]
+    """
+    if layer is None:
+        m = adata.X
+    else:
+        m = adata.layers[layer]
+
+    # number of cells containing each gene (sum nonzero along columns)
+    nt = m.astype(bool).sum(axis=0)
+    assert np.all(
+        nt
+    ), "Encountered {} genes with 0 cells by counts. Remove these before proceeding (i.e. sc.pp.filter_genes(adata,min_cells=1))".format(
+        np.size(nt) - np.count_nonzero(nt)
+    )
+    # gene frequency in each cell (l1 norm along rows)
+    tf = m / m.sum(axis=1)[:, None]
+
+    # inverse cell frequency (total cells / number of cells containing each gene)
+    if transform == "arcsinh":
+        idf = np.arcsinh(adata.n_obs / nt)
+    elif transform == "log":
+        idf = np.log(adata.n_obs / nt)
+    else:
+        raise ValueError("Please provide a valid transform (log or arcsinh).")
+
+    # save GF-ICF scores to .layers and total GF-ICF per cell in .obs
+    tf_idf = tf * idf
+    adata.obs["gf_icf_total"] = tf_idf.sum(axis=1)
+    if norm is None:
+        adata.layers["gf_icf"] = tf_idf
+    else:
+        adata.layers["gf_icf"] = normalize(tf_idf, norm=norm, axis=1)
 
 
 class cNMF:
