@@ -1127,15 +1127,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--subset",
-        type=str,
         help="[prepare] AnnData.obs column name to subset on before performing NMF",
-        default=None,
+        nargs="*",
     )
     parser.add_argument(
         "--subset-val",
         dest="subset_val",
         help="[prepare] Value to match in AnnData.obs[args.subset]",
-        default=1,
+        nargs="*",
     )
 
     parser.add_argument(
@@ -1165,22 +1164,23 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+    argdict = vars(args)
 
-    cnmf_obj = cNMF(output_dir=args.output_dir, name=args.name)
+    cnmf_obj = cNMF(output_dir=argdict["output_dir"], name=argdict["name"])
     cnmf_obj._initialize_dirs()
 
-    if args.command == "prepare":
+    if argdict["command"] == "prepare":
 
-        if args.counts.endswith(".h5ad"):
-            input_counts = sc.read(args.counts)
+        if argdict["counts"].endswith(".h5ad"):
+            input_counts = sc.read(argdict["counts"])
         else:
             ## Load txt or compressed dataframe and convert to scanpy object
-            if args.counts.endswith(".npz"):
-                input_counts = load_df_from_npz(args.counts)
+            if argdict["counts"].endswith(".npz"):
+                input_counts = load_df_from_npz(argdict["counts"])
             else:
-                input_counts = pd.read_csv(args.counts, sep="\t", index_col=0)
+                input_counts = pd.read_csv(argdict["counts"], sep="\t", index_col=0)
 
-            if args.densify:
+            if argdict["densify"]:
                 input_counts = sc.AnnData(
                     X=input_counts.values,
                     obs=pd.DataFrame(index=input_counts.index),
@@ -1193,22 +1193,24 @@ if __name__ == "__main__":
                     var=pd.DataFrame(index=input_counts.columns),
                 )
 
-        if sp.issparse(input_counts.X) & args.densify:
+        if sp.issparse(input_counts.X) & argdict["densify"]:
             input_counts.X = np.array(input_counts.X.todense())
 
-        if args.tpm is None:
+        if argdict["tpm"] is None:
             tpm = compute_tpm(input_counts)
             sc.write(cnmf_obj.paths["tpm"], tpm)
-        elif args.tpm.endswith(".h5ad"):
-            subprocess.call("cp %s %s" % (args.tpm, cnmf_obj.paths["tpm"]), shell=True)
+        elif argdict["tpm"].endswith(".h5ad"):
+            subprocess.call(
+                "cp %s %s" % (argdict["tpm"], cnmf_obj.paths["tpm"]), shell=True
+            )
             tpm = sc.read(cnmf_obj.paths["tpm"])
         else:
-            if args.tpm.endswith(".npz"):
-                tpm = load_df_from_npz(args.tpm)
+            if argdict["tpm"].endswith(".npz"):
+                tpm = load_df_from_npz(argdict["tpm"])
             else:
-                tpm = pd.read_csv(args.tpm, sep="\t", index_col=0)
+                tpm = pd.read_csv(argdict["tpm"], sep="\t", index_col=0)
 
-            if args.densify:
+            if argdict["densify"]:
                 tpm = sc.AnnData(
                     X=tpm.values,
                     obs=pd.DataFrame(index=tpm.index),
@@ -1223,12 +1225,23 @@ if __name__ == "__main__":
 
             sc.write(cnmf_obj.paths["tpm"], tpm)
 
-        if args.subset is not None:
-            print("Taking subset of sample with .obs[{}] = {}".format(args.subset, args.subset_val))
-            subset_val = args.subset_val
-            if subset_val.isdigit():
-                subset_val = int(subset_val)
-            tpm = tpm[tpm.obs[args.subset]==subset_val,:].copy()
+        if argdict["subset"]:
+            # initialize .obs column for choosing cells
+            tpm.obs["tpm_subset_combined"] = 0
+            # create label as union of given subset args
+            for i in range(len(argdict["subset"])):
+                subset_val = argdict["subset_val"][i]
+                if subset_val.isdigit():
+                    subset_val = int(subset_val)
+                print(
+                    "Taking subset of sample with .obs['{}'] = {}".format(
+                        argdict["subset"][i], subset_val
+                    )
+                )
+                tpm.obs.loc[
+                    tpm.obs[argdict["subset"][i]] == subset_val, "tpm_subset_combined"
+                ] = 1
+            tpm = tpm[tpm.obs["tpm_subset_combined"] == 1, :].copy()
 
         if sp.issparse(tpm.X):
             gene_tpm_mean = np.array(tpm.X.mean(axis=0)).reshape(-1)
@@ -1242,60 +1255,62 @@ if __name__ == "__main__":
         ).T
         save_df_to_npz(input_tpm_stats, cnmf_obj.paths["tpm_stats"])
 
-        if args.genes_file is not None:
-            highvargenes = open(args.genes_file).read().rstrip().split("\n")
+        if argdict["genes_file"] is not None:
+            highvargenes = open(argdict["genes_file"]).read().rstrip().split("\n")
         else:
             highvargenes = None
 
         norm_counts = cnmf_obj.get_norm_counts(
             input_counts,
             tpm,
-            num_highvar_genes=args.numgenes,
+            num_highvar_genes=argdict["numgenes"],
             high_variance_genes_filter=highvargenes,
         )
         cnmf_obj.save_norm_counts(norm_counts)
         (replicate_params, run_params) = cnmf_obj.get_nmf_iter_params(
-            ks=args.components,
-            n_iter=args.n_iter,
-            random_state_seed=args.seed,
-            beta_loss=args.beta_loss,
+            ks=argdict["components"],
+            n_iter=argdict["n_iter"],
+            random_state_seed=argdict["seed"],
+            beta_loss=argdict["beta_loss"],
         )
         cnmf_obj.save_nmf_iter_params(replicate_params, run_params)
 
     elif args.command == "factorize":
-        cnmf_obj.run_nmf(worker_i=args.worker_index, total_workers=args.total_workers)
+        cnmf_obj.run_nmf(
+            worker_i=argdict["worker_index"], total_workers=argdict["total_workers"]
+        )
 
     elif args.command == "combine":
         run_params = load_df_from_npz(cnmf_obj.paths["nmf_replicate_parameters"])
 
         if type(args.components) is int:
             ks = [args.components]
-        elif args.components is None:
+        elif argdict["components"] is None:
             ks = sorted(set(run_params.n_components))
         else:
-            ks = args.components
+            ks = argdict["components"]
 
         for k in ks:
             cnmf_obj.combine_nmf(k)
 
-    elif args.command == "consensus":
+    elif argdict["command"] == "consensus":
         run_params = load_df_from_npz(cnmf_obj.paths["nmf_replicate_parameters"])
 
-        if type(args.components) is int:
-            ks = [args.components]
-        elif args.components is None:
+        if type(argdict["components"]) is int:
+            ks = [argdict["components"]]
+        elif argdict["components"] is None:
             ks = sorted(set(run_params.n_components))
         else:
-            ks = args.components
+            ks = argdict["components"]
 
         for k in ks:
             merged_spectra = load_df_from_npz(cnmf_obj.paths["merged_spectra"] % k)
             cnmf_obj.consensus(
                 k,
-                args.local_density_threshold,
-                args.local_neighborhood_size,
-                args.show_clustering,
+                argdict["local_density_threshold"],
+                argdict["local_neighborhood_size"],
+                argdict["show_clustering"],
             )
 
-    elif args.command == "k_selection_plot":
+    elif argdict["command"] == "k_selection_plot":
         cnmf_obj.k_selection_plot()

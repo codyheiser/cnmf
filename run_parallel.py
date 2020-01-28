@@ -82,22 +82,24 @@ def main():
     )
     parser.add_argument(
         "--subset",
-        type=str,
         help="[prepare] AnnData.obs column name to subset on before performing NMF",
-        default=None,
+        nargs="*",
     )
     parser.add_argument(
         "--subset-val",
+        dest="subset_val",
         help="[prepare] Value to match in AnnData.obs[args.subset]",
-        default=1,
+        nargs="*",
     )
 
     # Collect args
     args = parser.parse_args()
     argdict = vars(args)
 
-    # convert components from list to string
+    # convert arguments from list to string for passing to cnmf.py
     argdict["components"] = " ".join([str(k) for k in argdict["components"]])
+    argdict["subset"] = " ".join([str(k) for k in argdict["subset"]])
+    argdict["subset_val"] = " ".join([str(k) for k in argdict["subset_val"]])
 
     # Directory containing cNMF and this script
     cnmfdir = os.path.dirname(sys.argv[0])
