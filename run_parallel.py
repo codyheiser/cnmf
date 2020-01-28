@@ -80,6 +80,17 @@ def main():
         help="[prepare] Pre-computed TPM values as df.npz or tab separated txt file. Cell x Gene matrix. If none is provided, TPM will be calculated automatically. This can be helpful if a particular normalization is desired.",
         default=None,
     )
+    parser.add_argument(
+        "--subset",
+        type=str,
+        help="[prepare] AnnData.obs column name to subset on before performing NMF",
+        default=None,
+    )
+    parser.add_argument(
+        "--subset-val",
+        help="[prepare] Value to match in AnnData.obs[args.subset]",
+        default=1,
+    )
 
     # Collect args
     args = parser.parse_args()

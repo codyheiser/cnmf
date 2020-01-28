@@ -1027,7 +1027,7 @@ if __name__ == "__main__":
 
         python cnmf.py factorize  --name test --output-dir $output_dir
 
-        THis can be parallelized as such:
+        This can be parallelized as such:
 
         python cnmf.py factorize  --name test --output-dir $output_dir --total-workers 2 --worker-index WORKER_INDEX (where worker_index starts with 0)
 
@@ -1125,6 +1125,18 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
     )
+    parser.add_argument(
+        "--subset",
+        type=str,
+        help="[prepare] AnnData.obs column name to subset on before performing NMF",
+        default=None,
+    )
+    parser.add_argument(
+        "--subset-val",
+        dest="subset_val",
+        help="[prepare] Value to match in AnnData.obs[args.subset]",
+        default=1,
+    )
 
     parser.add_argument(
         "--worker-index",
@@ -1210,6 +1222,13 @@ if __name__ == "__main__":
                 )
 
             sc.write(cnmf_obj.paths["tpm"], tpm)
+
+        if args.subset is not None:
+            print("Taking subset of sample with .obs[{}] = {}".format(args.subset, args.subset_val))
+            subset_val = args.subset_val
+            if subset_val.isdigit():
+                subset_val = int(subset_val)
+            tpm = tpm[tpm.obs[args.subset]==subset_val,:].copy()
 
         if sp.issparse(tpm.X):
             gene_tpm_mean = np.array(tpm.X.mean(axis=0)).reshape(-1)
