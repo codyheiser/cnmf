@@ -223,6 +223,7 @@ def compute_tpm(input_counts):
     Default TPM normalization
     """
     tpm = input_counts.copy()
+    tpm.layers["raw_counts"] = tpm.X.copy()
     sc.pp.normalize_total(tpm, target_sum=1e6)
     return tpm
 
@@ -274,6 +275,98 @@ def compute_gficf(adata, layer=None, transform="arcsinh", norm=None):
         adata.layers["gf_icf"] = tf_idf
     else:
         adata.layers["gf_icf"] = normalize(tf_idf, norm=norm, axis=1)
+
+
+def cnmf_markers(adata, spectra_score_file, n_genes=30, key="cnmf"):
+    """
+    read in gene spectra score output from cNMF and save top gene loadings 
+    for each usage as dataframe in adata.uns
+
+    Parameters:
+        adata (AnnData.AnnData): AnnData object
+        spectra_score_file (str): '<name>.gene_spectra_score.<k>.<dt>.txt' file from cNMF containing gene loadings
+        n_genes (int): number of top genes to list for each usage (rows of df)
+        key (str): prefix of adata.uns keys to save
+
+    Returns:
+        AnnData.AnnData: adata is edited in place to include gene spectra scores
+        (adata.varm["cnmf_spectra"]) and list of top genes by spectra score (adata.uns["cnmf_markers"])
+    """
+    # load Z-scored GEPs which reflect gene enrichment, save to adata.varm
+    spectra = pd.read_csv(spectra_score_file, sep="\t", index_col=0).T
+    adata.varm["{}_spectra".format(key)] = spectra.values
+    # obtain top n_genes for each GEP in sorted order and combine them into df
+    top_genes = []
+    for gep in spectra.columns:
+        top_genes.append(
+            list(spectra.sort_values(by=gep, ascending=False).index[:n_genes])
+        )
+    # save output to adata.uns
+    adata.uns["{}_markers".format(key)] = pd.DataFrame(
+        top_genes, index=spectra.columns
+    ).T
+
+
+def cnmf_load_results(adata, cnmf_dir, name, k, dt, key="cnmf", **kwargs):
+    """
+    Load results of cNMF.
+    Given adata object and corresponding cNMF output (cnmf_dir, name, k, dt to identify),
+    read in relevant results and save to adata object inplace, and output plot of gene
+    loadings for each GEP usage.
+
+    Parameters:
+        adata (AnnData.AnnData): AnnData object
+        cnmf_dir (str): relative path to directory containing cNMF outputs
+        name (str): name of cNMF replicate
+        k (int): value used for consensus factorization
+        dt (int): distance threshold value used for consensus clustering
+        key (str): prefix of adata.uns keys to save
+        n_points (int): how many top genes to include in rank_genes() plot
+        **kwargs: keyword args to pass to cnmf_markers()
+
+    Returns:
+        AnnData.AnnData: adata is edited in place to include overdispersed genes
+            (adata.var["cnmf_overdispersed"]), usages (adata.obs["usage_#"],
+            adata.obsm["cnmf_usages"]), gene spectra scores (adata.varm["cnmf_spectra"]),
+            and list of top genes by spectra score (adata.uns["cnmf_markers"]).
+    """
+    # read in cell usages
+    usage = pd.read_csv(
+        "{}/{}/{}.usages.k_{}.dt_{}.consensus.txt".format(
+            cnmf_dir, name, name, str(k), str(dt).replace(".", "_")
+        ),
+        sep="\t",
+        index_col=0,
+    )
+    usage.columns = ["usage_" + str(col) for col in usage.columns]
+    # normalize usages to total for each cell
+    usage_norm = usage.div(usage.sum(axis=1), axis=0)
+    usage_norm.index = usage_norm.index.astype(str)
+    # add usages to .obs for visualization
+    adata.obs = pd.merge(
+        left=adata.obs, right=usage_norm, how="left", left_index=True, right_index=True
+    )
+    # add usages as array in .obsm for dimension reduction
+    adata.obsm["cnmf_usages"] = usage_norm.values
+
+    # read in overdispersed genes determined by cNMF and add as metadata to adata.var
+    overdispersed = np.genfromtxt(
+        "{}/{}/{}.overdispersed_genes.txt".format(cnmf_dir, name, name), dtype=str
+    )
+    adata.var["cnmf_overdispersed"] = 0
+    adata.var.loc[
+        [x for x in adata.var.index if x in overdispersed], "cnmf_overdispersed"
+    ] = 1
+
+    # read top gene loadings for each GEP usage and save to adata.uns['cnmf_markers']
+    cnmf_markers(
+        adata,
+        "{}/{}/{}.gene_spectra_score.k_{}.dt_{}.txt".format(
+            cnmf_dir, name, name, str(k), str(dt).replace(".", "_")
+        ),
+        key=key,
+        **kwargs
+    )
 
 
 class cNMF:
@@ -472,7 +565,9 @@ class cNMF:
             )
 
         ## Subset out high-variance genes
+        print("Selecting {} highly variable genes".format(len(high_variance_genes_filter)))
         norm_counts = counts[:, high_variance_genes_filter]
+        norm_counts = norm_counts[tpm.obs_names, :].copy()
 
         ## Scale genes to unit variance
         if sp.issparse(tpm.X):
@@ -503,7 +598,7 @@ class cNMF:
 
     def save_norm_counts(self, norm_counts):
         self._initialize_dirs()
-        sc.write(self.paths["normalized_counts"], norm_counts)
+        norm_counts.write(self.paths["normalized_counts"], compression="gzip")
 
     def get_nmf_iter_params(
         self, ks, n_iter=100, random_state_seed=None, beta_loss="kullback-leibler"
@@ -1007,7 +1102,7 @@ class cNMF:
             tl.set_color("r")
 
         ax1.set_xlabel("Number of Components", fontsize=15)
-        ax1.grid("on")
+        ax1.grid(True)
         plt.tight_layout()
         fig.savefig(self.paths["k_selection_plot"], dpi=250)
         if close_fig:
@@ -1198,7 +1293,6 @@ if __name__ == "__main__":
 
         if argdict["tpm"] is None:
             tpm = compute_tpm(input_counts)
-            sc.write(cnmf_obj.paths["tpm"], tpm)
         elif argdict["tpm"].endswith(".h5ad"):
             subprocess.call(
                 "cp %s %s" % (argdict["tpm"], cnmf_obj.paths["tpm"]), shell=True
@@ -1223,8 +1317,6 @@ if __name__ == "__main__":
                     var=pd.DataFrame(index=tpm.columns),
                 )
 
-            sc.write(cnmf_obj.paths["tpm"], tpm)
-
         if argdict["subset"]:
             # initialize .obs column for choosing cells
             tpm.obs["tpm_subset_combined"] = 0
@@ -1242,6 +1334,14 @@ if __name__ == "__main__":
                     tpm.obs[argdict["subset"][i]] == subset_val, "tpm_subset_combined"
                 ] = 1
             tpm = tpm[tpm.obs["tpm_subset_combined"] == 1, :].copy()
+            tpm.obs.drop(columns="tpm_subset_combined", inplace=True)
+            print("Resulting counts matrix has {} cells and {} genes".format(tpm.shape[0], tpm.shape[1]))
+
+        n_null = tpm.n_vars - tpm.X.sum(axis=0).astype(bool).sum()
+        if n_null > 0:
+            sc.pp.filter_genes(tpm, min_counts=1)
+            print("Removing {} genes with zero counts; final shape {}".format(n_null, tpm.shape))
+        tpm.write(cnmf_obj.paths["tpm"], compression="gzip")
 
         if sp.issparse(tpm.X):
             gene_tpm_mean = np.array(tpm.X.mean(axis=0)).reshape(-1)
@@ -1310,6 +1410,25 @@ if __name__ == "__main__":
                 argdict["local_density_threshold"],
                 argdict["local_neighborhood_size"],
                 argdict["show_clustering"],
+            )
+            tpm = sc.read(cnmf_obj.paths["tpm"])
+            tpm.X = tpm.layers["raw_counts"].copy()
+            cnmf_load_results(
+                tpm,
+                cnmf_dir=cnmf_obj.output_dir,
+                name=cnmf_obj.name,
+                k=k,
+                dt=argdict["local_density_threshold"],
+                key="cnmf",
+            )
+            tpm.write(
+                os.path.join(
+                    cnmf_obj.output_dir,
+                    cnmf_obj.name,
+                    cnmf_obj.name
+                    + "_k{}_dt{}.h5ad".format(str(k), str(argdict["local_density_threshold"]).replace(".", "_")),
+                ),
+                compression="gzip",
             )
 
     elif argdict["command"] == "k_selection_plot":
