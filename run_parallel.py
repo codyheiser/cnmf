@@ -98,8 +98,9 @@ def main():
 
     # convert arguments from list to string for passing to cnmf.py
     argdict["components"] = " ".join([str(k) for k in argdict["components"]])
-    argdict["subset"] = " ".join([str(k) for k in argdict["subset"]])
-    argdict["subset_val"] = " ".join([str(k) for k in argdict["subset_val"]])
+    if argdict["subset"]:
+        argdict["subset"] = " ".join([str(k) for k in argdict["subset"]])
+        argdict["subset_val"] = " ".join([str(k) for k in argdict["subset_val"]])
 
     # Directory containing cNMF and this script
     cnmfdir = os.path.dirname(sys.argv[0])
