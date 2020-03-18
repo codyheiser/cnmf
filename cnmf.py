@@ -299,6 +299,7 @@ def subset_adata(adata, subset, subset_val):
             adata.shape[0], adata.shape[1]
             )
     )
+    return adata
 
 
 def cnmf_markers(adata, spectra_score_file, n_genes=30, key="cnmf"):
@@ -1342,7 +1343,7 @@ if __name__ == "__main__":
                 )
 
         if argdict["subset"]:
-            subset_adata(
+            tpm = subset_adata(
                 tpm,
                 subset=argdict["subset"],
                 subset_val=argdict["subset_val"]
