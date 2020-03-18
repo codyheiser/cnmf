@@ -277,6 +277,30 @@ def compute_gficf(adata, layer=None, transform="arcsinh", norm=None):
         adata.layers["gf_icf"] = normalize(tf_idf, norm=norm, axis=1)
 
 
+def subset_adata(adata, subset, subset_val):
+    # initialize .obs column for choosing cells
+    adata.obs["adata_subset_combined"] = 0
+    # create label as union of given subset args
+    for i in range(len(subset)):
+        if subset_val[i].isdigit():
+            subset_val[i] = int(subset_val[i])
+        print(
+            "Taking subset of sample with .obs['{}'] = {}".format(
+                subset[i], subset_val[i]
+            )
+        )
+        adata.obs.loc[
+            adata.obs[subset[i]] == subset_val[i], "adata_subset_combined"
+        ] = 1
+    adata = adata[adata.obs["adata_subset_combined"] == 1, :].copy()
+    adata.obs.drop(columns="adata_subset_combined", inplace=True)
+    print(
+        "Resulting counts matrix has {} cells and {} genes".format(
+            adata.shape[0], adata.shape[1]
+            )
+    )
+
+
 def cnmf_markers(adata, spectra_score_file, n_genes=30, key="cnmf"):
     """
     read in gene spectra score output from cNMF and save top gene loadings 
@@ -1318,24 +1342,11 @@ if __name__ == "__main__":
                 )
 
         if argdict["subset"]:
-            # initialize .obs column for choosing cells
-            tpm.obs["tpm_subset_combined"] = 0
-            # create label as union of given subset args
-            for i in range(len(argdict["subset"])):
-                subset_val = argdict["subset_val"][i]
-                if subset_val.isdigit():
-                    subset_val = int(subset_val)
-                print(
-                    "Taking subset of sample with .obs['{}'] = {}".format(
-                        argdict["subset"][i], subset_val
-                    )
-                )
-                tpm.obs.loc[
-                    tpm.obs[argdict["subset"][i]] == subset_val, "tpm_subset_combined"
-                ] = 1
-            tpm = tpm[tpm.obs["tpm_subset_combined"] == 1, :].copy()
-            tpm.obs.drop(columns="tpm_subset_combined", inplace=True)
-            print("Resulting counts matrix has {} cells and {} genes".format(tpm.shape[0], tpm.shape[1]))
+            subset_adata(
+                tpm,
+                subset=argdict["subset"],
+                subset_val=argdict["subset_val"]
+            )
 
         n_null = tpm.n_vars - tpm.X.sum(axis=0).astype(bool).sum()
         if n_null > 0:
