@@ -1256,6 +1256,13 @@ if __name__ == "__main__":
         help="[prepare] Value to match in AnnData.obs[args.subset]",
         nargs="*",
     )
+    parser.add_argument(
+        "-l",
+        "--layer",
+        type=str,
+        default=None,
+        help="[prepare] Key from .layers to use. Default '.X'.",
+    )
 
     parser.add_argument(
         "--worker-index",
@@ -1312,6 +1319,11 @@ if __name__ == "__main__":
                     obs=pd.DataFrame(index=input_counts.index),
                     var=pd.DataFrame(index=input_counts.columns),
                 )
+
+        # use desired layer if not .X
+        if args.layer is not None:
+            print("Using layer '{}' for cNMF".format(args.layer))
+            input_counts.X = input_counts.layers[args.layer].copy()
 
         if sp.issparse(input_counts.X) & argdict["densify"]:
             input_counts.X = np.array(input_counts.X.todense())
