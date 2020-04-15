@@ -91,6 +91,13 @@ def main():
         help="[prepare] Value to match in AnnData.obs[args.subset]",
         nargs="*",
     )
+    parser.add_argument(
+        "-l",
+        "--layer",
+        type=str,
+        default=None,
+        help="[prepare] Key from .layers to use. Default '.X'.",
+    )
 
     # Collect args
     args = parser.parse_args()
