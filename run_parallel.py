@@ -1,6 +1,5 @@
 import argparse, sys, os
 import subprocess as sp
-from cnmf import load_df_from_npz
 
 """
 Run all of the steps through plotting the K selection plot of cNMF sequentially using GNU
@@ -13,14 +12,6 @@ python run_parallel.py --output-dir $output_dir \
             -k 6 7 8 9 --n-iter 5 --total-workers 2 \
             --seed 5
 """
-
-
-def pick_k(output_dir, name):
-    k_sel_stats = load_df_from_npz(
-        "{}/{}/{}.k_selection_stats.df.npz".format(output_dir, name, name)
-    )
-    return k_sel_stats.loc[k_sel_stats.stability.idxmax, "k"]
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -68,7 +59,7 @@ def main():
         "--seed",
         type=int,
         help="[prepare] Master seed for generating the seed list.",
-        default=None,
+        default=18,
     )
     parser.add_argument(
         "--numgenes",
@@ -199,8 +190,7 @@ def main():
     sp.call(clean_cmd, shell=True)
 
     if argdict["auto_k"]:
-        k_consensus = pick_k(argdict["output_dir"], argdict["name"])
-        consensus_cmd = "python {}/cnmf.py consensus --output-dir {} --name {} -k {} --local-density-threshold {}".format(
+        consensus_cmd = "python {}/cnmf.py consensus --output-dir {} --name {} --auto-k --local-density-threshold {}".format(
             cnmfdir,
             argdict["output_dir"],
             argdict["name"],

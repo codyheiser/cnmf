@@ -1137,6 +1137,12 @@ class cNMF:
             plt.close(fig)
 
 
+
+def pick_k(k_selection_stats_path):
+    k_sel_stats = load_df_from_npz(k_selection_stats_path)
+    return k_sel_stats.loc[k_sel_stats.stability.idxmax, "k"]
+
+
 if __name__ == "__main__":
     """
     Example commands for now:
@@ -1195,7 +1201,7 @@ if __name__ == "__main__":
         "--components",
         type=int,
         help='[prepare] Numper of components (k) for matrix factorization. Several can be specified with "-k 8 9 10"',
-        nargs="+",
+        nargs="*",
     )
     parser.add_argument(
         "-n",
@@ -1274,6 +1280,11 @@ if __name__ == "__main__":
         default=0,
     )
 
+    parser.add_argument(
+        "--auto-k",
+        help="[consensus] Automatically pick k value for consensus based on maximum stability",
+        action="store_true",
+    )
     parser.add_argument(
         "--local-density-threshold",
         type=str,
@@ -1429,6 +1440,9 @@ if __name__ == "__main__":
 
     elif argdict["command"] == "consensus":
         run_params = load_df_from_npz(cnmf_obj.paths["nmf_replicate_parameters"])
+
+        if argdict["auto_k"]:
+            argdict["components"] = pick_k(cnmf_obj.paths["k_selection_stats"])
 
         if type(argdict["components"]) is int:
             ks = [argdict["components"]]
