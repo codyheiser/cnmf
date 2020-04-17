@@ -147,7 +147,7 @@ def main():
     prepare_opts = [
         "--{} {}".format(k.replace("_", "-"), argdict[k])
         for k in argdict.keys()
-        if argdict[k] is not None
+        if (argdict[k] is not None) and not isinstance(argdict[k], bool)
     ]
     prepare_cmd = "python {}/cnmf.py prepare ".format(cnmfdir)
     prepare_cmd += " ".join(prepare_opts)
