@@ -1140,7 +1140,7 @@ class cNMF:
 
 def pick_k(k_selection_stats_path):
     k_sel_stats = load_df_from_npz(k_selection_stats_path)
-    return k_sel_stats.loc[k_sel_stats.stability.idxmax, "k"]
+    return int(k_sel_stats.loc[k_sel_stats.stability.idxmax, "k"])
 
 
 if __name__ == "__main__":
