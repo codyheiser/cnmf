@@ -1,5 +1,6 @@
 import argparse, sys, os
 import subprocess as sp
+from cnmf import load_df_from_npz
 
 """
 Run all of the steps through plotting the K selection plot of cNMF sequentially using GNU
@@ -12,6 +13,13 @@ python run_parallel.py --output-dir $output_dir \
             -k 6 7 8 9 --n-iter 5 --total-workers 2 \
             --seed 5
 """
+
+
+def pick_k(output_dir, name):
+    k_sel_stats = load_df_from_npz(
+        "{}/{}/{}.k_selection_stats.df.npz".format(output_dir, name, name)
+    )
+    return k_sel_stats.loc[k_sel_stats.stability.idxmax, "k"]
 
 
 def main():
@@ -99,6 +107,36 @@ def main():
         help="[prepare] Key from .layers to use. Default '.X'.",
     )
 
+    parser.add_argument(
+        "--auto-k",
+        help="[consensus] Automatically pick k value for consensus based on maximum \
+            stability",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--local-density-threshold",
+        type=str,
+        help="[consensus] Threshold for the local density filtering. This string must convert to a float >0 and <=2",
+        default="0.5",
+    )
+    parser.add_argument(
+        "--local-neighborhood-size",
+        type=float,
+        help="[consensus] Fraction of the number of replicates to use as nearest neighbors for local density filtering",
+        default=0.30,
+    )
+    parser.add_argument(
+        "--show-clustering",
+        dest="show_clustering",
+        help="[consensus] Produce a clustergram figure summarizing the spectra clustering",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--cleanup",
+        help="[consensus] Remove excess files after saving results to clean workspace",
+        action="store_true",
+    )
+
     # Collect args
     args = parser.parse_args()
     argdict = vars(args)
@@ -159,6 +197,21 @@ def main():
     )
     print(clean_cmd)
     sp.call(clean_cmd, shell=True)
+
+    if argdict["auto_k"]:
+        k_consensus = pick_k(argdict["output_dir"], argdict["name"])
+        consensus_cmd = "python {}/cnmf.py consensus --output-dir {} --name {} -k {} --local-density-threshold {}".format(
+            cnmfdir,
+            argdict["output_dir"],
+            argdict["name"],
+            argdict["local_density_threshold"],
+        )
+        if argdict["show_clustering"]:
+            consensus_cmd = " ".join([consensus_cmd, "--show-clustering"])
+        if argdict["cleanup"]:
+            consensus_cmd = " ".join([consensus_cmd, "--cleanup"])
+        print(consensus_cmd)
+        sp.call(consensus_cmd, shell=True)
 
 
 if __name__ == "__main__":

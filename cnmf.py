@@ -298,7 +298,7 @@ def subset_adata(adata, subset, subset_val):
     print(
         "Resulting counts matrix has {} cells and {} genes".format(
             adata.shape[0], adata.shape[1]
-            )
+        )
     )
     return adata
 
@@ -591,7 +591,9 @@ class cNMF:
             )
 
         ## Subset out high-variance genes
-        print("Selecting {} highly variable genes".format(len(high_variance_genes_filter)))
+        print(
+            "Selecting {} highly variable genes".format(len(high_variance_genes_filter))
+        )
         norm_counts = counts[:, high_variance_genes_filter]
         norm_counts = norm_counts[tpm.obs_names, :].copy()
 
@@ -1362,15 +1364,17 @@ if __name__ == "__main__":
 
         if argdict["subset"]:
             tpm = subset_adata(
-                tpm,
-                subset=argdict["subset"],
-                subset_val=argdict["subset_val"]
+                tpm, subset=argdict["subset"], subset_val=argdict["subset_val"]
             )
 
         n_null = tpm.n_vars - tpm.X.sum(axis=0).astype(bool).sum()
         if n_null > 0:
             sc.pp.filter_genes(tpm, min_counts=1)
-            print("Removing {} genes with zero counts; final shape {}".format(n_null, tpm.shape))
+            print(
+                "Removing {} genes with zero counts; final shape {}".format(
+                    n_null, tpm.shape
+                )
+            )
         tpm.write(cnmf_obj.paths["tpm"], compression="gzip")
 
         if sp.issparse(tpm.X):
@@ -1456,13 +1460,18 @@ if __name__ == "__main__":
                     cnmf_obj.output_dir,
                     cnmf_obj.name,
                     cnmf_obj.name
-                    + "_k{}_dt{}.h5ad".format(str(k), str(argdict["local_density_threshold"]).replace(".", "_")),
+                    + "_k{}_dt{}.h5ad".format(
+                        str(k),
+                        str(argdict["local_density_threshold"]).replace(".", "_"),
+                    ),
                 ),
                 compression="gzip",
             )
 
         if argdict["cleanup"]:
-            files = glob.glob("{}/{}/*.txt".format(args.output_dir, args.name)) + glob.glob("{}/{}/*.df.npz".format(args.output_dir, args.name))
+            files = glob.glob(
+                "{}/{}/*.txt".format(args.output_dir, args.name)
+            ) + glob.glob("{}/{}/*.df.npz".format(args.output_dir, args.name))
             for file in files:
                 os.remove(file)
             shutil.rmtree("{}/{}/cnmf_tmp".format(args.output_dir, args.name))
