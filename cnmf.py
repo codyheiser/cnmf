@@ -8,6 +8,7 @@ consensus non-negative matrix factorization (cNMF)
 import numpy as np
 import pandas as pd
 import os, errno
+import shutil
 import datetime
 import uuid
 import itertools
@@ -16,7 +17,7 @@ import subprocess
 import scipy.sparse as sp
 
 from scipy.spatial.distance import squareform
-from sklearn.decomposition.nmf import non_negative_factorization
+from sklearn.decomposition import non_negative_factorization
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.utils import sparsefuncs
@@ -1211,7 +1212,7 @@ if __name__ == "__main__":
         "--seed",
         type=int,
         help="[prepare] Seed for pseudorandom number generation",
-        default=None,
+        default=18,
     )
     parser.add_argument(
         "--genes-file",
