@@ -328,7 +328,7 @@ def cnmf_markers(adata, spectra_score_file, n_genes=30, key="cnmf"):
         )
     # save output to adata.uns
     adata.uns["{}_markers".format(key)] = pd.DataFrame(
-        top_genes, index=spectra.columns
+        top_genes, index=spectra.columns.astype(str)
     ).T
 
 
@@ -1289,6 +1289,11 @@ if __name__ == "__main__":
         help="[consensus] Produce a clustergram figure summarizing the spectra clustering",
         action="store_true",
     )
+    parser.add_argument(
+        "--cleanup",
+        help="[consensus] Remove excess files after saving results to clean workspace",
+        action="store_true",
+    )
 
     args = parser.parse_args()
     argdict = vars(args)
@@ -1454,6 +1459,11 @@ if __name__ == "__main__":
                 ),
                 compression="gzip",
             )
+
+        if argdict["cleanup"]:
+            shutil.rmtree("cnmf_tmp")
+            os.remove("*.txt")
+            os.remove("*.df.npz")
 
     elif argdict["command"] == "k_selection_plot":
         cnmf_obj.k_selection_plot()
