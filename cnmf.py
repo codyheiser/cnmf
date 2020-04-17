@@ -1462,9 +1462,10 @@ if __name__ == "__main__":
             )
 
         if argdict["cleanup"]:
+            files = glob.glob("{}/{}/*.txt".format(args.output_dir, args.name)) + glob.glob("{}/{}/*.df.npz".format(args.output_dir, args.name))
+            for file in files:
+                os.remove(file)
             shutil.rmtree("{}/{}/cnmf_tmp".format(args.output_dir, args.name))
-            os.remove("{}/{}/*.txt".format(args.output_dir, args.name))
-            os.remove("{}/{}/*.df.npz".format(args.output_dir, args.name))
 
     elif argdict["command"] == "k_selection_plot":
         cnmf_obj.k_selection_plot()
