@@ -8,6 +8,7 @@ consensus non-negative matrix factorization (cNMF)
 import numpy as np
 import pandas as pd
 import os, errno
+import glob
 import shutil
 import datetime
 import uuid
@@ -1176,6 +1177,13 @@ if __name__ == "__main__":
         choices=["prepare", "factorize", "combine", "consensus", "k_selection_plot"],
     )
     parser.add_argument(
+        "counts",
+        type=str,
+        nargs="?",
+        help="[prepare] Input (cell x gene) counts matrix as .h5ad, df.npz, or tab delimited text file",
+    )
+
+    parser.add_argument(
         "--name",
         type=str,
         help="[all] Name for analysis. All output will be placed in [output-dir]/[name]/...",
@@ -1189,13 +1197,13 @@ if __name__ == "__main__":
         nargs="?",
         default=".",
     )
-
     parser.add_argument(
-        "-c",
-        "--counts",
-        type=str,
-        help="[prepare] Input (cell x gene) counts matrix as df.npz or tab delimited text file",
+        "--total-workers",
+        type=int,
+        help="[all] Total number of workers to distribute jobs to",
+        default=1,
     )
+
     parser.add_argument(
         "-k",
         "--components",
@@ -1211,10 +1219,22 @@ if __name__ == "__main__":
         default=100,
     )
     parser.add_argument(
-        "--total-workers",
-        type=int,
-        help="[all] Total number of workers to distribute jobs to",
-        default=1,
+        "--subset",
+        help="[prepare] AnnData.obs column name to subset on before performing NMF",
+        nargs="*",
+    )
+    parser.add_argument(
+        "--subset-val",
+        dest="subset_val",
+        help="[prepare] Value to match in AnnData.obs[args.subset]",
+        nargs="*",
+    )
+    parser.add_argument(
+        "-l",
+        "--layer",
+        type=str,
+        default=None,
+        help="[prepare] Key from .layers to use. Default '.X'.",
     )
     parser.add_argument(
         "--seed",
@@ -1254,24 +1274,6 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
     )
-    parser.add_argument(
-        "--subset",
-        help="[prepare] AnnData.obs column name to subset on before performing NMF",
-        nargs="*",
-    )
-    parser.add_argument(
-        "--subset-val",
-        dest="subset_val",
-        help="[prepare] Value to match in AnnData.obs[args.subset]",
-        nargs="*",
-    )
-    parser.add_argument(
-        "-l",
-        "--layer",
-        type=str,
-        default=None,
-        help="[prepare] Key from .layers to use. Default '.X'.",
-    )
 
     parser.add_argument(
         "--worker-index",
@@ -1289,7 +1291,7 @@ if __name__ == "__main__":
         "--local-density-threshold",
         type=str,
         help="[consensus] Threshold for the local density filtering. This string must convert to a float >0 and <=2",
-        default="0.5",
+        default="0.1",
     )
     parser.add_argument(
         "--local-neighborhood-size",
@@ -1483,12 +1485,9 @@ if __name__ == "__main__":
             )
 
         if argdict["cleanup"]:
-            files = glob.glob(
-                "{}/{}/*.txt".format(args.output_dir, args.name)
-            ) + glob.glob("{}/{}/*.df.npz".format(args.output_dir, args.name))
+            files = glob.glob("{}/{}/*.consensus.*".format(args.output_dir, args.name)) + glob.glob("{}/{}/cnmf_tmp/*.consensus.*".format(args.output_dir, args.name)) + glob.glob("{}/{}/*.gene_spectra_*".format(args.output_dir, args.name)) + glob.glob("{}/{}/cnmf_tmp/*.gene_spectra_*".format(args.output_dir, args.name)) + glob.glob("{}/{}/cnmf_tmp/*.local_density_cache.*".format(args.output_dir, args.name)) + glob.glob("{}/{}/cnmf_tmp/*.stats.*".format(args.output_dir, args.name))
             for file in files:
                 os.remove(file)
-            shutil.rmtree("{}/{}/cnmf_tmp".format(args.output_dir, args.name))
 
     elif argdict["command"] == "k_selection_plot":
         cnmf_obj.k_selection_plot()
