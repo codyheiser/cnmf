@@ -16,68 +16,47 @@ python run_parallel.py --output-dir $output_dir \
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "counts",
+        type=str,
+        nargs="?",
+        help="[prepare] Input (cell x gene) counts matrix as .h5ad, df.npz, or tab delimited text file",
+    )
+
+    parser.add_argument(
         "--name",
         type=str,
-        help="[all] Name for this analysis. All output will be placed in [output-dir]/[name]/...",
+        help="[all] Name for analysis. All output will be placed in [output-dir]/[name]/...",
         nargs="?",
-        default=None,
+        default="cNMF",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
         help="[all] Output directory. All output will be placed in [output-dir]/[name]/...",
         nargs="?",
+        default=".",
     )
     parser.add_argument(
-        "-c",
-        "--counts",
-        type=str,
-        help="[prepare] Input counts in cell x gene matrix as df.npz or tab separated txt file",
+        "--total-workers",
+        type=int,
+        help="[all] Total number of workers to distribute jobs to",
+        default=1,
     )
+
     parser.add_argument(
         "-k",
         "--components",
         type=int,
         help='[prepare] Numper of components (k) for matrix factorization. Several can be specified with "-k 8 9 10"',
-        nargs="+",
-        default=[10],
+        nargs="*",
+        default=[8, 9, 10, 11, 12, 13, 14],
     )
     parser.add_argument(
         "-n",
         "--n-iter",
         type=int,
-        help="[prepare] Numper of iteration for each factorization",
+        help="[prepare] Numper of factorization replicates",
         default=100,
-    )
-    parser.add_argument(
-        "--total-workers",
-        type=int,
-        help="[all] Total workers that are working together.",
-        default=1,
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        help="[prepare] Master seed for generating the seed list.",
-        default=18,
-    )
-    parser.add_argument(
-        "--numgenes",
-        type=int,
-        help="[prepare] Number of high variance genes to use for matrix factorization.",
-        default=None,
-    )
-    parser.add_argument(
-        "--genes-file",
-        type=str,
-        help="[prepare] File containing a list of genes to include, one gene per line. Must match column labels of counts matrix.",
-        default=None,
-    )
-    parser.add_argument(
-        "--tpm",
-        type=str,
-        help="[prepare] Pre-computed TPM values as df.npz or tab separated txt file. Cell x Gene matrix. If none is provided, TPM will be calculated automatically. This can be helpful if a particular normalization is desired.",
-        default=None,
     )
     parser.add_argument(
         "--subset",
@@ -97,18 +76,62 @@ def main():
         default=None,
         help="[prepare] Key from .layers to use. Default '.X'.",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        help="[prepare] Seed for pseudorandom number generation",
+        default=18,
+    )
+    parser.add_argument(
+        "--genes-file",
+        type=str,
+        help="[prepare] File containing a list of genes to include, one gene per line. Must match column labels of counts matrix.",
+        default=None,
+    )
+    parser.add_argument(
+        "--numgenes",
+        type=int,
+        help="[prepare] Number of high variance genes to use for matrix factorization.",
+        default=2000,
+    )
+    parser.add_argument(
+        "--tpm",
+        type=str,
+        help="[prepare] Pre-computed (cell x gene) TPM values as df.npz or tab separated txt file. If not provided TPM will be calculated automatically",
+        default=None,
+    )
+    parser.add_argument(
+        "--beta-loss",
+        type=str,
+        choices=["frobenius", "kullback-leibler", "itakura-saito"],
+        help="[prepare] Loss function for NMF.",
+        default="frobenius",
+    )
+    parser.add_argument(
+        "--densify",
+        dest="densify",
+        help="[prepare] Treat the input data as non-sparse",
+        action="store_true",
+        default=False,
+    )
+
+    parser.add_argument(
+        "--worker-index",
+        type=int,
+        help="[factorize] Index of current worker (the first worker should have index 0)",
+        default=0,
+    )
 
     parser.add_argument(
         "--auto-k",
-        help="[consensus] Automatically pick k value for consensus based on maximum \
-            stability",
+        help="[consensus] Automatically pick k value for consensus based on maximum stability",
         action="store_true",
     )
     parser.add_argument(
         "--local-density-threshold",
         type=str,
         help="[consensus] Threshold for the local density filtering. This string must convert to a float >0 and <=2",
-        default="0.5",
+        default="0.1",
     )
     parser.add_argument(
         "--local-neighborhood-size",
@@ -144,12 +167,14 @@ def main():
         cnmfdir = "."
 
     # Run prepare
+    counts_arg = argdict["counts"]
+    del argdict["counts"]
     prepare_opts = [
         "--{} {}".format(k.replace("_", "-"), argdict[k])
         for k in argdict.keys()
         if (argdict[k] is not None) and not isinstance(argdict[k], bool)
     ]
-    prepare_cmd = "python {}/cnmf.py prepare ".format(cnmfdir)
+    prepare_cmd = "python {}/cnmf.py prepare {}".format(cnmfdir, counts_arg)
     prepare_cmd += " ".join(prepare_opts)
     print(prepare_cmd)
     sp.call(prepare_cmd, shell=True)
