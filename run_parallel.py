@@ -174,7 +174,7 @@ def main():
         for k in argdict.keys()
         if (argdict[k] is not None) and not isinstance(argdict[k], bool)
     ]
-    prepare_cmd = "python {}/cnmf.py prepare {}".format(cnmfdir, counts_arg)
+    prepare_cmd = "python {}/cnmf.py prepare {} ".format(cnmfdir, counts_arg)
     prepare_cmd += " ".join(prepare_opts)
     print(prepare_cmd)
     sp.call(prepare_cmd, shell=True)
