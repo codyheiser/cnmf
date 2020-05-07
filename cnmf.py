@@ -1210,13 +1210,14 @@ if __name__ == "__main__":
         type=int,
         help='[prepare] Numper of components (k) for matrix factorization. Several can be specified with "-k 8 9 10"',
         nargs="*",
+        default=[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
     )
     parser.add_argument(
         "-n",
         "--n-iter",
         type=int,
         help="[prepare] Numper of factorization replicates",
-        default=100,
+        default=50,
     )
     parser.add_argument(
         "--subset",
