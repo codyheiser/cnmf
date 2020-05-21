@@ -602,11 +602,11 @@ class cNMF:
         if sp.issparse(tpm.X):
             sc.pp.scale(norm_counts, zero_center=False)
             if np.isnan(norm_counts.X.data).sum() > 0:
-                print("Warning NaNs in normalized counts matrix")
+                print("Warning: NaNs in normalized counts matrix")
         else:
             norm_counts.X /= norm_counts.X.std(axis=0, ddof=1)
             if np.isnan(norm_counts.X).sum().sum() > 0:
-                print("Warning NaNs in normalized counts matrix")
+                print("Warning: NaNs in normalized counts matrix")
 
         ## Save a \n-delimited list of the high-variance genes used for factorization
         open(self.paths["nmf_genes_list"], "w").write(
@@ -616,10 +616,9 @@ class cNMF:
         ## Check for any cells that have 0 counts of the overdispersed genes
         zerocells = norm_counts.X.sum(axis=1) == 0
         if zerocells.sum() > 0:
-            examples = norm_counts.obs.index[zerocells]
             print(
-                "Warning: %d cells have zero counts of overdispersed genes. E.g. %s"
-                % (zerocells.sum(), examples[0])
+                "Warning: %d cells have zero counts of overdispersed genes"
+                % (zerocells.sum())
             )
             print("Consensus step may not run when this is the case")
 
