@@ -1138,7 +1138,6 @@ class cNMF:
             plt.close(fig)
 
 
-
 def pick_k(k_selection_stats_path):
     k_sel_stats = load_df_from_npz(k_selection_stats_path)
     return int(k_sel_stats.loc[k_sel_stats.stability.idxmax, "k"])
@@ -1486,7 +1485,24 @@ if __name__ == "__main__":
             )
 
         if argdict["cleanup"]:
-            files = glob.glob("{}/{}/*.consensus.*".format(args.output_dir, args.name)) + glob.glob("{}/{}/cnmf_tmp/*.consensus.*".format(args.output_dir, args.name)) + glob.glob("{}/{}/*.gene_spectra_*".format(args.output_dir, args.name)) + glob.glob("{}/{}/cnmf_tmp/*.gene_spectra_*".format(args.output_dir, args.name)) + glob.glob("{}/{}/cnmf_tmp/*.local_density_cache.*".format(args.output_dir, args.name)) + glob.glob("{}/{}/cnmf_tmp/*.stats.*".format(args.output_dir, args.name))
+            files = (
+                glob.glob("{}/{}/*.consensus.*".format(args.output_dir, args.name))
+                + glob.glob(
+                    "{}/{}/cnmf_tmp/*.consensus.*".format(args.output_dir, args.name)
+                )
+                + glob.glob("{}/{}/*.gene_spectra_*".format(args.output_dir, args.name))
+                + glob.glob(
+                    "{}/{}/cnmf_tmp/*.gene_spectra_*".format(args.output_dir, args.name)
+                )
+                + glob.glob(
+                    "{}/{}/cnmf_tmp/*.local_density_cache.*".format(
+                        args.output_dir, args.name
+                    )
+                )
+                + glob.glob(
+                    "{}/{}/cnmf_tmp/*.stats.*".format(args.output_dir, args.name)
+                )
+            )
             for file in files:
                 os.remove(file)
 

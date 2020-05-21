@@ -13,6 +13,7 @@ python run_parallel.py --output-dir $output_dir \
             --seed 5
 """
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -189,10 +190,9 @@ def main():
     sp.call(factorize_cmd, shell=True)
 
     # Run combine
-    combine_cmd = "python %s/cnmf.py combine --output-dir %s --name %s" % (
-        cnmfdir,
-        argdict["output_dir"],
-        argdict["name"],
+    combine_cmd = (
+        "python %s/cnmf.py combine --output-dir %s --name %s --components %s"
+        % (cnmfdir, argdict["output_dir"], argdict["name"], argdict["components"],)
     )
     print(combine_cmd)
     sp.call(combine_cmd, shell=True)
