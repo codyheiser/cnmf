@@ -325,7 +325,7 @@ def cnmf_load_results(adata, cnmf_dir, name, k, dt, key="cnmf", **kwargs):
         left=adata.obs, right=usage_norm, how="left", left_index=True, right_index=True
     )
     # replace missing values with zeros for all factors
-    adata.obs.loc[:,usage_norm.columns].fillna(inplace=True)
+    adata.obs.loc[:,usage_norm.columns].fillna(value=0, inplace=True)
     # add usages as array in .obsm for dimension reduction
     adata.obsm["cnmf_usages"] = adata.obs.loc[:,usage_norm.columns].values
 
