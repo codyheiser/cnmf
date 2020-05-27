@@ -230,55 +230,6 @@ def compute_tpm(input_counts):
     return tpm
 
 
-def compute_gficf(adata, layer=None, transform="arcsinh", norm=None):
-    """
-    return GF-ICF scores for each element in anndata counts matrix
-
-    Parameters:
-        adata (AnnData.AnnData): AnnData object
-        layer (str or None): name of layer to perform GF-ICF normalization on. if None, use AnnData.X
-        transform (str): how to transform ICF weights. arcsinh is recommended to retain counts of genes
-            expressed in all cells. log transform eliminates these genes from the dataset.
-        norm (str or None): normalization strategy following GF-ICF transform.
-            None: do not normalize GF-ICF scores
-            "l1": divide each score by sum of scores for each cell (analogous to sc.pp.normalize_total)
-            "l2": divide each score by sqrt of sum of squares of scores for each cell
-
-    Returns:
-        AnnData.AnnData: adata is edited in place to add GF-ICF normalization to .layers["gf_icf"]
-    """
-    if layer is None:
-        m = adata.X
-    else:
-        m = adata.layers[layer]
-
-    # number of cells containing each gene (sum nonzero along columns)
-    nt = m.astype(bool).sum(axis=0)
-    assert np.all(
-        nt
-    ), "Encountered {} genes with 0 cells by counts. Remove these before proceeding (i.e. sc.pp.filter_genes(adata,min_cells=1))".format(
-        np.size(nt) - np.count_nonzero(nt)
-    )
-    # gene frequency in each cell (l1 norm along rows)
-    tf = m / m.sum(axis=1)[:, None]
-
-    # inverse cell frequency (total cells / number of cells containing each gene)
-    if transform == "arcsinh":
-        idf = np.arcsinh(adata.n_obs / nt)
-    elif transform == "log":
-        idf = np.log(adata.n_obs / nt)
-    else:
-        raise ValueError("Please provide a valid transform (log or arcsinh).")
-
-    # save GF-ICF scores to .layers and total GF-ICF per cell in .obs
-    tf_idf = tf * idf
-    adata.obs["gf_icf_total"] = tf_idf.sum(axis=1)
-    if norm is None:
-        adata.layers["gf_icf"] = tf_idf
-    else:
-        adata.layers["gf_icf"] = normalize(tf_idf, norm=norm, axis=1)
-
-
 def subset_adata(adata, subset, subset_val):
     # initialize .obs column for choosing cells
     adata.obs["adata_subset_combined"] = 0
@@ -619,8 +570,7 @@ class cNMF:
         zerocells = norm_counts.X.sum(axis=1) == 0
         if zerocells.sum() > 0:
             print(
-                "Warning: %d cells have zero counts of overdispersed genes. \
-                    Ignoring these cells for factorization"
+                "Warning: %d cells have zero counts of overdispersed genes - ignoring these cells for factorization."
                 % (zerocells.sum())
             )
             sc.pp.filter_cells(norm_counts, min_counts=1)
@@ -918,6 +868,9 @@ class cNMF:
 
         # Compute gene-scores for each GEP by regressing usage on Z-scores of TPM
         tpm = sc.read(self.paths["tpm"])
+        # ignore cells not present in norm_counts
+        if tpm.n_obs != norm_counts.n_obs:
+            tpm = tpm[norm_counts.obs_names,:].copy()
         tpm_stats = load_df_from_npz(self.paths["tpm_stats"])
 
         if sp.issparse(tpm.X):
@@ -940,8 +893,8 @@ class cNMF:
             self.paths["gene_spectra_score__txt"] % (k, density_threshold_repl),
         )
 
-        # Convert spectra to TPM units, and obtain results for all genes by running last step of NMF
-        # with usages fixed and TPM as the input matrix
+        # Convert spectra to TPM units, and obtain results for all genes by running
+        # last step of NMF with usages fixed and TPM as the input matrix
         norm_usages = rf_usages.div(rf_usages.sum(axis=1), axis=0)
         refit_nmf_kwargs.update(dict(H=norm_usages.T.values,))
 
