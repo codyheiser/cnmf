@@ -1,4 +1,6 @@
-# Consensus Non-negative Matrix Factorization (cNMF) v2.0
+# Consensus Non-negative Matrix Factorization (cNMF)
+
+[![Latest Version][tag-version]]
 
 cNMF is an analysis pipeline for inferring gene expression programs from single-cell RNA-Seq (scRNA-Seq) data.
 
@@ -6,51 +8,14 @@ It takes a count matrix (N cells X G genes) as input and produces a (K x G) matr
 
 You can read more about the method in the publication [here](https://elifesciences.org/articles/43803). In addition, the analyses in that paper are available for exploration and re-execution on [Code Ocean](https://codeocean.com/2018/11/20/identifying-gene-expression-programs-of-cell-type-identity-and-cellular-activity-with-single-cell-rna-seq/code). You can read more about how to run the cNMF pipeline in this README and can test it out with example data in the included [tutorial on simulated data](Tutorials/analyze_simulated_example_data.ipynb) and [PBMC tutorial dataset](Tutorials/analyze_pbmc_example_data.ipynb).
 
-# Updates from version 1.1
- - Saves results of **consensus** in `.h5ad` file
- - `--auto-k` option to choose **k** value with highest stability and automatically perform **consensus**
- - `--cleanup` flag to remove unneccesary clutter, while maintaining ability to run **consensus** manually without re-running **prepare** or **factorize**
- - `--subset` argument to take subset of AnnData object based on `.obs` label(s) prior to cNMF
- - `--layer` argument to use another matrix from `.layers` of AnnData object instead of `.X`
-
 # Installing cNMF
-We provide 2 ways to configure the dependencies for cNMF
-
-<ins>Install them using `conda` or `pip`<ins>
-
-We use [conda](https://conda.io/miniconda.html) as a package management system to install the necessary python packages. After installing and configuring conda, you can create an environment for the cNMF workflow as follows
+You can install a local version of the package by cloning this repository and running the following command from the main directory:
 ```
-conda update -yn base conda # Make sure conda is up to date
-conda create -n cnmf_env --yes --channel bioconda --channel conda-forge --channel defaults fastcluster==1.1.25 matplotlib==3.1.1 numpy==1.17.3 palettable==3.3.0 pandas==0.25.2 scipy==1.3.1 scikit-learn==0.21.3 cython==0.29.13 pyyaml==5.1.2 scanpy==1.4.4.post1 parallel && conda clean --yes --all
-conda activate cnmf_env
-
-## Only needed to load the example notebook in jupyterlab but not needed for non-interactive runs ## 
-conda install --yes jupyterlab==1.1.4 ipython==7.8.0 && conda clean --yes --all
-
-## Only needed for the tsne in the example ##    
-pip install --upgrade --no-cache-dir --upgrade-strategy=only-if-needed bhtsne==0.1.9 #(only needed to generate the tsne in the example)
+pip install -e .
 ```
+This will install all python dependencies. To run the `cnmf_p` pipeline, you need to have [GNU Parallel](https://www.gnu.org/software/parallel/) installed on your machine as well.
 
-Then you need to activate the cnmf_env conda environment each time before running cNMF. With the command below.
-```
-conda activate cnmf_env
-```
-
-Or you can simply run the following command in a fresh virtual environment:
-```
-pip install -r requirements.txt
-```
-
-<ins>Run cNMF within a Docker container<ins>
-
-We provide a [Dockerfile](Dockerfile) for building a Docker image that is configured for running cNMF.
-
-Alternatively, you can just pull the docker container from quai.io with the command
-```
-docker pull quay.io/dkotliar/cnmf:0.2 
-```
-
-## Parallelizing the factorization step of cNMF
+## Parallelizing the factorization of cNMF
 
 cNMF runs NMF multiple times and combines the results of each replicates to obtain a more robust consensus estimate. Since many replicates are run, typically for many choices of K, this can be much faster if replicates are run in parallel.
 
@@ -59,6 +24,11 @@ This cNMF code is designed to be agnostic to the method of parallelization. It d
 You specify the total number of jobs in the prepare command (step 1) with the `--n-jobs` flag. Then, for step 2 you run all of the jobs for a specific worker using the `--worker-index` flag. Step 3 combines the results files that were output by all of the workers. The workers are indexed from 0 to (`n-jobs` - 1).
 
 We provide example commands in the [simulated dataset tutorial](#analyze_simulated_example_data.ipynb) and the [PBMC dataset tutorial](#analyze_pbmc_example_data.ipynb) for distributing the tasks over multiple cores on a large machine with [GNU parallel](https://www.gnu.org/software/parallel/) as well as for distributing them to multiple nodes on an UGER compute cluster. By default, the  tutorials do not use any parallelization but simply provide the commands that would be used to run the steps in parallel.
+
+The following terminal command will show all arguments for parallel processing:
+```
+cnmf_p -h
+```
 
 # Input data and Scanpy
 Input counts data can be provided to cNMF in 2 ways:
@@ -69,14 +39,14 @@ Input counts data can be provided to cNMF in 2 ways:
 # Step by step guide 
 You can see all possible command line options by running
 ```
-python cnmf.py --help
+cnmf -h
 ```
 and see the [simulated dataset tutorial](Tutorials/analyze_simulated_example_data.ipynb) and the [PBMC dataset tutorial](Tutorials/analyze_pbmc_example_data.ipynb) for a step by step walkthrough with example data. We also describe the key ideas and parameters for each step below.
 
 ### Step 1 - normalize the input matrix and prepare the run parameters
 Example command:
 ```
-python ./cnmf.py prepare ./example_data/counts_prefiltered.txt --output-dir ./example_data --name example_cNMF -k 5 6 7 8 9 10 11 12 13 --n-iter 100 --n-jobs 1 --seed 14 --numgenes 2000
+cnmf prepare ./example_data/counts_prefiltered.txt --output-dir ./example_data --name example_cNMF -k 5 6 7 8 9 10 11 12 13 --n-iter 100 --n-jobs 1 --seed 14 --numgenes 2000
 ```
 Path structure
   - `--output-dir` - the output directory into which all results will be placed. Default: `.`
@@ -107,12 +77,12 @@ __Please note that the input matrix should not include any cells or genes with 0
 ### Step 2 factorize the matrix
 Next NMF is run for all of the replicates specified in the previous command. The tasks have been allocated to workers indexed from 0 ... (`--n-jobs` -1). You can run all of the NMF replicates allocated to a specific index like below for index 0 corresponding to the first worker:
 ```
-python ./cnmf.py factorize --output-dir ./example_data --name example_cNMF --worker-index 0 
+cnmf factorize --output-dir ./example_data --name example_cNMF --worker-index 0 
 ```
 This is running all of the jobs for worker 1. If you specified a single worker in the prepare step (`--n-jobs` 1) like in the command above, this will run all of the factorizations. However, if you specified more than 1 total worker, you would need to run the commands for those workers as well with separate commands, E.g.:
 ```
-python ./cnmf.py factorize --output-dir ./example_data --name example_cNMF --worker-index 1 
-python ./cnmf.py factorize --output-dir ./example_data --name example_cNMF --worker-index 2
+cnmf factorize --output-dir ./example_data --name example_cNMF --worker-index 1 
+cnmf factorize --output-dir ./example_data --name example_cNMF --worker-index 2
 ...
 ```
 You should submit these commands to distinct processors or machines so they are all run in parallel. See the [tutorial on simulated data](Tutorials/analyze_simulated_example_data.ipynb) and [PBMC tutorial](Tutorials/analyze_pbmc_example_data.ipynb) for examples of how you could submit all of the workers to run in parallel either using [GNU parralel](https://www.gnu.org/software/parallel/) or an [UGER scheduler](http://www.univa.com/resources/files/univa_user_guide_univa__grid_engine_854.pdf). 
@@ -123,7 +93,7 @@ __Tip: The implementation of NMF in scikit-learn by default will use more than 1
 Since a separate file has been created for each replicate for each K, we combine the replicates for each K as below:
 Example command:
 ```
-python ./cnmf.py combine --output-dir ./example_data --name example_cNMF
+cnmf combine --output-dir ./example_data --name example_cNMF
 ```
 After this, you can optionally delete the individual spectra files like so:
 ```
@@ -135,7 +105,7 @@ This will iterate through all of the values of K that have been run and will cal
 It then outputs a PNG image file plotting this relationship into the output_dir/name directory
 Example command:
 ```
-python ./cnmf.py k_selection_plot --output-dir ./example_data --name example_cNMF
+cnmf k_selection_plot --output-dir ./example_data --name example_cNMF
 ```
 This outputs a K selection plot to example_data/example_cNMF/example_cNMF.k_selection.png. There is no universally definitive criteria for choosing K but we will typically use the largest value that is reasonably stable and/or a local maximum in stability. See the discussion and methods section and the response to reviewer comments in [the manuscript](https://elifesciences.org/articles/43803) for more discussion about selecting K.
 
@@ -152,7 +122,7 @@ In practice, we tend to run this command twice, once with `--local-density-thres
 
 Example command:
 ```
-python ./cnmf.py consensus --output-dir ./example_data --name example_cNMF --components 10 --local-density-threshold 0.01 --show-clustering
+cnmf consensus --output-dir ./example_data --name example_cNMF --components 10 --local-density-threshold 0.01 --show-clustering
 ```
   - `--components` - value of K to compute consensus clusters for. Must be among the options provided to the prepare step
   - `--local-density-threshold` - the threshold on average distance to K nearest neighbors to use. 2.0 or above means that nothing will be filtered out. Default: 0.5
@@ -166,3 +136,13 @@ By the end of this step, you should have the following results files in your dir
    - Diagnostic plot - `example_data/example_cNMF/example_cNMF.clustering.k_10.dt_0_01.png`
 
 See the tutorials for some subsequent analysis steps that could be used to analyze these results files once they are created.
+
+# Updates from version 1.1 (D Kotliar)
+ - packaging and command-line entrypoints for `cnmf` and `cnmf_p` (parallel)
+ - Saves results of **consensus** in `.h5ad` file
+ - `--auto-k` option to choose **k** value with highest stability and automatically perform **consensus**
+ - `--cleanup` flag to remove unneccesary clutter, while maintaining ability to run **consensus** manually without re-running **prepare** or **factorize**
+ - `--subset` argument to take subset of AnnData object based on `.obs` label(s) prior to cNMF
+ - `--layer` argument to use another matrix from `.layers` of AnnData object instead of `.X`
+
+[tag-version]: https://img.shields.io/github/v/tag/codyheiser/cNMF

@@ -1,4 +1,4 @@
-import argparse, sys, os
+import sys, os
 import subprocess as sp
 from ._version import get_versions
 
@@ -22,7 +22,7 @@ def parallel(args):
     ]
     prepare_cmd = "cnmf prepare {} ".format(cnmfdir, counts_arg)
     prepare_cmd += " ".join(prepare_opts)
-    print(prepare_cmd)
+    print("Running preparation:\n\t{}".format(prepare_cmd))
     sp.call(prepare_cmd, shell=True)
 
     # Run factorize
@@ -31,7 +31,7 @@ def parallel(args):
         "nohup parallel cnmf factorize --output-dir %s --name %s --worker-index {} ::: %s"
         % (cnmfdir, argdict["output_dir"], argdict["name"], workind)
     )
-    print(factorize_cmd)
+    print("Running iterative NMF:\n\t{}".format(factorize_cmd))
     sp.call(factorize_cmd, shell=True)
 
     # Run combine
@@ -39,7 +39,7 @@ def parallel(args):
         "cnmf combine --output-dir %s --name %s --components %s"
         % (cnmfdir, argdict["output_dir"], argdict["name"], argdict["components"],)
     )
-    print(combine_cmd)
+    print("Combining NMF replicates:\n\t{}".format(combine_cmd))
     sp.call(combine_cmd, shell=True)
 
     # Plot K selection
@@ -48,7 +48,7 @@ def parallel(args):
         argdict["output_dir"],
         argdict["name"],
     )
-    print(Kselect_cmd)
+    print("Plotting K selection parameters:\n\t{}".format(Kselect_cmd))
     sp.call(Kselect_cmd, shell=True)
 
     # Delete individual iteration files
@@ -56,7 +56,7 @@ def parallel(args):
         argdict["output_dir"],
         argdict["name"],
     )
-    print(clean_cmd)
+    print("Cleaning up workspace:\n\t{}".format(clean_cmd))
     sp.call(clean_cmd, shell=True)
 
     if argdict["auto_k"]:
@@ -70,21 +70,24 @@ def parallel(args):
             consensus_cmd = " ".join([consensus_cmd, "--show-clustering"])
         if argdict["cleanup"]:
             consensus_cmd = " ".join([consensus_cmd, "--cleanup"])
-        print(consensus_cmd)
+        print("Building consensus factors:\n\t{}".format(consensus_cmd))
         sp.call(consensus_cmd, shell=True)
 
 
 def main():
+    import argparse
     parser = argparse.ArgumentParser(prog="cnmf_p")
     parser.add_argument(
         "-V", "--version", action="version", version=get_versions()["version"],
     )
+
     parser.add_argument(
         "counts",
         type=str,
         nargs="?",
         help="[prepare] Input (cell x gene) counts matrix as .h5ad, df.npz, or tab delimited text file",
     )
+
     parser.add_argument(
         "--name",
         type=str,
@@ -103,7 +106,7 @@ def main():
         "-j",
         "--n-jobs",
         type=int,
-        help="[all] Total number of workers to distribute jobs to",
+        help="[prepare/factorize] Total number of workers to distribute jobs to",
         default=1,
     )
     parser.add_argument(

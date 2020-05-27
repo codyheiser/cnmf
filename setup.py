@@ -11,6 +11,13 @@ import setuptools
 from setuptools import setup
 
 
+def read(fname):
+    with io.open(
+        os.path.join(os.path.dirname(__file__), fname), encoding="utf-8"
+    ) as _in:
+        return _in.read()
+
+
 if __name__ == "__main__":
     import versioneer
 
