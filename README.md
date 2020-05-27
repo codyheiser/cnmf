@@ -10,6 +10,8 @@ You can read more about the method in the publication [here](https://elifescienc
  - Saves results of **consensus** in `.h5ad` file
  - `--auto-k` option to choose **k** value with highest stability and automatically perform **consensus**
  - `--cleanup` flag to remove unneccesary clutter, while maintaining ability to run **consensus** manually without re-running **prepare** or **factorize**
+ - `--subset` argument to take subset of AnnData object based on `.obs` label(s) prior to cNMF
+ - `--layer` argument to use another matrix from `.layers` of AnnData object instead of `.X`
 
 # Installing cNMF
 We provide 2 ways to configure the dependencies for cNMF
