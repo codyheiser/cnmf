@@ -45,9 +45,9 @@ if __name__ == "__main__":
         ],
         python_requires=">=3.6",
         entry_points={
-          "console_scripts": [
-              "cnmf = cNMF.cnmf:main",
-              "cnmf_p = cNMF.cnmf_parallel:main",
-          ]
-      },
+            "console_scripts": [
+                "cnmf = cNMF.cnmf:main",
+                "cnmf_p = cNMF.cnmf_parallel:main",
+            ]
+        },
     )

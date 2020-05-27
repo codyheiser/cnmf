@@ -20,7 +20,7 @@ def parallel(args):
         for k in argdict.keys()
         if (argdict[k] is not None) and not isinstance(argdict[k], bool)
     ]
-    prepare_cmd = "cnmf prepare {} ".format(cnmfdir, counts_arg)
+    prepare_cmd = "cnmf prepare {} ".format(counts_arg)
     prepare_cmd += " ".join(prepare_opts)
     print("Running preparation:\n\t{}".format(prepare_cmd))
     sp.call(prepare_cmd, shell=True)
@@ -29,22 +29,22 @@ def parallel(args):
     workind = " ".join([str(x) for x in range(argdict["n_jobs"])])
     factorize_cmd = (
         "nohup parallel cnmf factorize --output-dir %s --name %s --worker-index {} ::: %s"
-        % (cnmfdir, argdict["output_dir"], argdict["name"], workind)
+        % (argdict["output_dir"], argdict["name"], workind)
     )
     print("Running iterative NMF:\n\t{}".format(factorize_cmd))
     sp.call(factorize_cmd, shell=True)
 
     # Run combine
-    combine_cmd = (
-        "cnmf combine --output-dir %s --name %s --components %s"
-        % (cnmfdir, argdict["output_dir"], argdict["name"], argdict["components"],)
+    combine_cmd = "cnmf combine --output-dir %s --name %s --components %s" % (
+        argdict["output_dir"],
+        argdict["name"],
+        argdict["components"],
     )
     print("Combining NMF replicates:\n\t{}".format(combine_cmd))
     sp.call(combine_cmd, shell=True)
 
     # Plot K selection
     Kselect_cmd = "cnmf k_selection_plot --output-dir %s --name %s" % (
-        cnmfdir,
         argdict["output_dir"],
         argdict["name"],
     )
@@ -61,10 +61,7 @@ def parallel(args):
 
     if argdict["auto_k"]:
         consensus_cmd = "cnmf consensus --output-dir {} --name {} --auto-k --local-density-threshold {}".format(
-            cnmfdir,
-            argdict["output_dir"],
-            argdict["name"],
-            argdict["local_density_threshold"],
+            argdict["output_dir"], argdict["name"], argdict["local_density_threshold"],
         )
         if argdict["show_clustering"]:
             consensus_cmd = " ".join([consensus_cmd, "--show-clustering"])
@@ -76,6 +73,7 @@ def parallel(args):
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(prog="cnmf_p")
     parser.add_argument(
         "-V", "--version", action="version", version=get_versions()["version"],

@@ -325,9 +325,9 @@ def cnmf_load_results(adata, cnmf_dir, name, k, dt, key="cnmf", **kwargs):
         left=adata.obs, right=usage_norm, how="left", left_index=True, right_index=True
     )
     # replace missing values with zeros for all factors
-    adata.obs.loc[:,usage_norm.columns].fillna(value=0, inplace=True)
+    adata.obs.loc[:, usage_norm.columns].fillna(value=0, inplace=True)
     # add usages as array in .obsm for dimension reduction
-    adata.obsm["cnmf_usages"] = adata.obs.loc[:,usage_norm.columns].values
+    adata.obsm["cnmf_usages"] = adata.obs.loc[:, usage_norm.columns].values
 
     # read in overdispersed genes determined by cNMF and add as metadata to adata.var
     overdispersed = np.genfromtxt(
@@ -870,7 +870,7 @@ class cNMF:
         tpm = sc.read(self.paths["tpm"])
         # ignore cells not present in norm_counts
         if tpm.n_obs != norm_counts.n_obs:
-            tpm = tpm[norm_counts.obs_names,:].copy()
+            tpm = tpm[norm_counts.obs_names, :].copy()
         tpm_stats = load_df_from_npz(self.paths["tpm_stats"])
 
         if sp.issparse(tpm.X):
@@ -1105,7 +1105,7 @@ def prepare(args):
     cnmf_obj._initialize_dirs()
     print("Reading in counts from {} - ".format(argdict["counts"]), end="")
     if argdict["counts"].endswith(".h5ad"):
-            input_counts = sc.read(argdict["counts"])
+        input_counts = sc.read(argdict["counts"])
     else:
         ## Load txt or compressed dataframe and convert to scanpy object
         if argdict["counts"].endswith(".npz"):
@@ -1215,9 +1215,7 @@ def factorize(args):
     cnmf_obj = cNMF(output_dir=argdict["output_dir"], name=argdict["name"])
     cnmf_obj._initialize_dirs()
 
-    cnmf_obj.run_nmf(
-            worker_i=argdict["worker_index"], total_workers=argdict["n_jobs"]
-        )
+    cnmf_obj.run_nmf(worker_i=argdict["worker_index"], total_workers=argdict["n_jobs"])
 
 
 def combine(args):
@@ -1279,8 +1277,7 @@ def consensus(args):
                 cnmf_obj.name,
                 cnmf_obj.name
                 + "_k{}_dt{}.h5ad".format(
-                    str(k),
-                    str(argdict["local_density_threshold"]).replace(".", "_"),
+                    str(k), str(argdict["local_density_threshold"]).replace(".", "_"),
                 ),
             ),
             compression="gzip",
@@ -1301,9 +1298,7 @@ def consensus(args):
                     args.output_dir, args.name
                 )
             )
-            + glob.glob(
-                "{}/{}/cnmf_tmp/*.stats.*".format(args.output_dir, args.name)
-            )
+            + glob.glob("{}/{}/cnmf_tmp/*.stats.*".format(args.output_dir, args.name))
         )
         for file in files:
             os.remove(file)
@@ -1320,12 +1315,12 @@ def k_selection(args):
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(prog="cnmf")
     parser.add_argument(
         "-V", "--version", action="version", version=get_versions()["version"],
     )
     subparsers = parser.add_subparsers()
-
 
     prepare_parser = subparsers.add_parser(
         "prepare", help="Prep scRNA-seq data for cNMF analysis.",
@@ -1391,10 +1386,7 @@ def main():
         help="Key from .layers to use. Default '.X'.",
     )
     prepare_parser.add_argument(
-        "--seed",
-        type=int,
-        help="Seed for pseudorandom number generation",
-        default=18,
+        "--seed", type=int, help="Seed for pseudorandom number generation", default=18,
     )
     prepare_parser.add_argument(
         "--genes-file",
@@ -1430,7 +1422,6 @@ def main():
     )
     prepare_parser.set_defaults(func=prepare)
 
-
     factorize_parser = subparsers.add_parser(
         "factorize", help="Run NMF iteratively to generate factors for consensus.",
     )
@@ -1463,9 +1454,9 @@ def main():
     )
     factorize_parser.set_defaults(func=factorize)
 
-
     combine_parser = subparsers.add_parser(
-        "combine", help="Combine factors from NMF iterations and calculate stats for choosing consensus.",
+        "combine",
+        help="Combine factors from NMF iterations and calculate stats for choosing consensus.",
     )
     combine_parser.add_argument(
         "--name",
@@ -1482,7 +1473,6 @@ def main():
         default=".",
     )
     combine_parser.set_defaults(func=combine)
-
 
     consensus_parser = subparsers.add_parser(
         "consensus", help="Calculate consensus factors from NMF iterations.",
@@ -1531,9 +1521,9 @@ def main():
     )
     consensus_parser.set_defaults(func=consensus)
 
-
     k_selection_parser = subparsers.add_parser(
-        "k_selection_plot", help="Plot stats across k values to choose optimal k for consensus.",
+        "k_selection_plot",
+        help="Plot stats across k values to choose optimal k for consensus.",
     )
     k_selection_parser.add_argument(
         "--name",
@@ -1550,7 +1540,6 @@ def main():
         default=".",
     )
     k_selection_parser.set_defaults(func=k_selection)
-
 
     args = parser.parse_args()
     args.func(args)
