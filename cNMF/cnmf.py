@@ -232,7 +232,7 @@ def compute_tpm(input_counts):
 
 def subset_adata(adata, subset, subset_val=None):
     if subset_val is None:
-        subset_val = rep(1, times=len(subset))
+        subset_val = np.repeat(1, len(subset))
     # initialize .obs column for choosing cells
     adata.obs["adata_subset_combined"] = 0
     # create label as union of given subset args
