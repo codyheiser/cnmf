@@ -230,7 +230,9 @@ def compute_tpm(input_counts):
     return tpm
 
 
-def subset_adata(adata, subset, subset_val):
+def subset_adata(adata, subset, subset_val=None):
+    if subset_val is None:
+        subset_val = rep(1, times=len(subset))
     # initialize .obs column for choosing cells
     adata.obs["adata_subset_combined"] = 0
     # create label as union of given subset args
@@ -1162,9 +1164,7 @@ def prepare(args):
             )
 
     if argdict["subset"]:
-        tpm = subset_adata(
-            tpm, subset=argdict["subset"], subset_val=argdict["subset_val"]
-        )
+        tpm = subset_adata(tpm, subset=argdict["subset"])
 
     n_null = tpm.n_vars - tpm.X.sum(axis=0).astype(bool).sum()
     if n_null > 0:
@@ -1369,13 +1369,7 @@ def main():
     )
     prepare_parser.add_argument(
         "--subset",
-        help="AnnData.obs column name to subset on before performing NMF",
-        nargs="*",
-    )
-    prepare_parser.add_argument(
-        "--subset-val",
-        dest="subset_val",
-        help="Value to match in AnnData.obs[args.subset]",
+        help="AnnData.obs column name to subset on before performing NMF. Cells to keep should be True or 1",
         nargs="*",
     )
     prepare_parser.add_argument(

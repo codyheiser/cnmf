@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+consensus non-negative matrix factorization (cNMF) adapted from (Kotliar, et al. 2019)
+entire pipeline run in parallel using GNU parallel
+
+@author: C Heiser
+2020
+"""
 import sys, os
 import subprocess as sp
 from ._version import get_versions
@@ -10,11 +18,16 @@ def parallel(args):
     argdict["components"] = " ".join([str(k) for k in argdict["components"]])
     if argdict["subset"]:
         argdict["subset"] = " ".join([str(k) for k in argdict["subset"]])
-        argdict["subset_val"] = " ".join([str(k) for k in argdict["subset_val"]])
 
-    # Run prepare
+    # remove arguments from dictionary prior to prepare
     counts_arg = argdict["counts"]
     del argdict["counts"]
+    local_dens_thresh_arg = argdict["local_density_threshold"]
+    del argdict["local_density_threshold"]
+    local_neighborhood_size_arg = argdict["local_neighborhood_size"]
+    del argdict["local_neighborhood_size"]
+
+    # Run prepare
     prepare_opts = [
         "--{} {}".format(k.replace("_", "-"), argdict[k])
         for k in argdict.keys()
@@ -60,8 +73,11 @@ def parallel(args):
     sp.call(clean_cmd, shell=True)
 
     if argdict["auto_k"]:
-        consensus_cmd = "cnmf consensus --output-dir {} --name {} --auto-k --local-density-threshold {}".format(
-            argdict["output_dir"], argdict["name"], argdict["local_density_threshold"],
+        consensus_cmd = "cnmf consensus --output-dir {} --name {} --auto-k --local-density-threshold {} --local-neighborhood-size {}".format(
+            argdict["output_dir"],
+            argdict["name"],
+            local_dens_thresh_arg,
+            local_neighborhood_size_arg,
         )
         if argdict["show_clustering"]:
             consensus_cmd = " ".join([consensus_cmd, "--show-clustering"])
@@ -124,13 +140,7 @@ def main():
     )
     parser.add_argument(
         "--subset",
-        help="[prepare] AnnData.obs column name to subset on before performing NMF",
-        nargs="*",
-    )
-    parser.add_argument(
-        "--subset-val",
-        dest="subset_val",
-        help="[prepare] Value to match in AnnData.obs[args.subset]",
+        help="[prepare] AnnData.obs column name to subset on before performing NMF. Cells to keep should be True or 1",
         nargs="*",
     )
     parser.add_argument(
@@ -177,12 +187,6 @@ def main():
         help="[prepare] Treat the input data as non-sparse",
         action="store_true",
         default=False,
-    )
-    parser.add_argument(
-        "--worker-index",
-        type=int,
-        help="[factorize] Index of current worker (the first worker should have index 0)",
-        default=0,
     )
     parser.add_argument(
         "--auto-k",
