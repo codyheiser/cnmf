@@ -373,8 +373,10 @@ def cnmf_load_results(adata, cnmf_dir, name, k, dt, key="cnmf", **kwargs):
     adata.obs = pd.merge(
         left=adata.obs, right=usage_norm, how="left", left_index=True, right_index=True
     )
+    # replace missing values with zeros for all factors
+    adata.obs.loc[:,usage_norm.columns].fillna(inplace=True)
     # add usages as array in .obsm for dimension reduction
-    adata.obsm["cnmf_usages"] = usage_norm.values
+    adata.obsm["cnmf_usages"] = adata.obs.loc[:,usage_norm.columns].values
 
     # read in overdispersed genes determined by cNMF and add as metadata to adata.var
     overdispersed = np.genfromtxt(
@@ -617,10 +619,11 @@ class cNMF:
         zerocells = norm_counts.X.sum(axis=1) == 0
         if zerocells.sum() > 0:
             print(
-                "Warning: %d cells have zero counts of overdispersed genes"
+                "Warning: %d cells have zero counts of overdispersed genes. \
+                    Ignoring these cells for factorization"
                 % (zerocells.sum())
             )
-            print("Consensus step may not run when this is the case")
+            sc.pp.filter_cells(norm_counts, min_counts=1)
 
         return norm_counts
 
@@ -1196,7 +1199,8 @@ if __name__ == "__main__":
         default=".",
     )
     parser.add_argument(
-        "--total-workers",
+        "-j",
+        "--n-jobs",
         type=int,
         help="[all] Total number of workers to distribute jobs to",
         default=1,
@@ -1423,7 +1427,7 @@ if __name__ == "__main__":
 
     elif args.command == "factorize":
         cnmf_obj.run_nmf(
-            worker_i=argdict["worker_index"], total_workers=argdict["total_workers"]
+            worker_i=argdict["worker_index"], total_workers=argdict["n_jobs"]
         )
 
     elif args.command == "combine":

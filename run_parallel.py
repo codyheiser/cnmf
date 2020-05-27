@@ -9,7 +9,7 @@ as for running the individual steps of cnmf.py
 Example command:
 python run_parallel.py --output-dir $output_dir \
             --name test --counts path_to_counts.df.npz \
-            -k 6 7 8 9 --n-iter 5 --total-workers 2 \
+            -k 6 7 8 9 --n-iter 5 --n-jobs 2 \
             --seed 5
 """
 
@@ -38,7 +38,8 @@ def main():
         default=".",
     )
     parser.add_argument(
-        "--total-workers",
+        "-j",
+        "--n-jobs",
         type=int,
         help="[all] Total number of workers to distribute jobs to",
         default=1,
@@ -181,7 +182,7 @@ def main():
     sp.call(prepare_cmd, shell=True)
 
     # Run factorize
-    workind = " ".join([str(x) for x in range(argdict["total_workers"])])
+    workind = " ".join([str(x) for x in range(argdict["n_jobs"])])
     factorize_cmd = (
         "nohup parallel python %s/cnmf.py factorize --output-dir %s --name %s --worker-index {} ::: %s"
         % (cnmfdir, argdict["output_dir"], argdict["name"], workind)
