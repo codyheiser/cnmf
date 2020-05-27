@@ -1,6 +1,6 @@
 # Consensus Non-negative Matrix Factorization (cNMF)
 
-![Latest Version][tag-version]
+[![Latest Version][tag-version]][repo-url]
 
 cNMF is an analysis pipeline for inferring gene expression programs from single-cell RNA-Seq (scRNA-Seq) data.
 
@@ -146,3 +146,4 @@ See the tutorials for some subsequent analysis steps that could be used to analy
  - `--layer` argument to use another matrix from `.layers` of AnnData object instead of `.X`
 
 [tag-version]: https://img.shields.io/github/v/tag/codyheiser/cNMF
+[repo-url]: https://pypi.python.org/pypi/dropkick/
