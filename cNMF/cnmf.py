@@ -230,30 +230,16 @@ def compute_tpm(input_counts):
     return tpm
 
 
-def subset_adata(adata, subset, subset_val=None):
-    if subset_val is None:
-        subset_val = np.repeat(1, len(subset))
+def subset_adata(adata, subset):
+    print("Subsetting AnnData on {}".format(subset), end="")
     # initialize .obs column for choosing cells
     adata.obs["adata_subset_combined"] = 0
     # create label as union of given subset args
     for i in range(len(subset)):
-        if subset_val[i].isdigit():
-            subset_val[i] = int(subset_val[i])
-        print(
-            "Taking subset of sample with .obs['{}'] = {}".format(
-                subset[i], subset_val[i]
-            )
-        )
-        adata.obs.loc[
-            adata.obs[subset[i]] == subset_val[i], "adata_subset_combined"
-        ] = 1
+        adata.obs.loc[adata.obs[subset[i]] == 1, "adata_subset_combined"] = 1
     adata = adata[adata.obs["adata_subset_combined"] == 1, :].copy()
     adata.obs.drop(columns="adata_subset_combined", inplace=True)
-    print(
-        "Resulting counts matrix has {} cells and {} genes".format(
-            adata.shape[0], adata.shape[1]
-        )
-    )
+    print(" - now {} cells and {} genes".format(adata.n_obs, adata.n_vars))
     return adata
 
 
