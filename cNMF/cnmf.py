@@ -1452,6 +1452,14 @@ def main():
         nargs="?",
         default=".",
     )
+    combine_parser.add_argument(
+        "-k",
+        "--components",
+        type=int,
+        help='Number of components (k) for matrix factorization. Several can be specified with "-k 8 9 10"',
+        nargs="*",
+        default=[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+    )
     combine_parser.set_defaults(func=combine)
 
     consensus_parser = subparsers.add_parser(
@@ -1470,6 +1478,14 @@ def main():
         help="Output directory. All output will be placed in [output-dir]/[name]/...",
         nargs="?",
         default=".",
+    )
+    consensus_parser.add_argument(
+        "-k",
+        "--components",
+        type=int,
+        help='Numper of components (k) for matrix factorization. Several can be specified with "-k 8 9 10"',
+        nargs="*",
+        default=[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
     )
     consensus_parser.add_argument(
         "--auto-k",
