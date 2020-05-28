@@ -35,7 +35,7 @@ from ._version import get_versions
 
 def save_df_to_npz(obj, filename):
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", UserWarning)
+        warnings.filterwarnings("ignore")
         np.savez_compressed(
             filename,
             data=obj.values,
@@ -50,7 +50,7 @@ def save_df_to_text(obj, filename):
 
 def load_df_from_npz(filename):
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", UserWarning)
+        warnings.filterwarnings("ignore")
         with np.load(filename, allow_pickle=True) as f:
             obj = pd.DataFrame(**f)
     return obj
