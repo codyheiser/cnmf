@@ -37,7 +37,10 @@ def save_df_to_npz(obj, filename):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", UserWarning)
         np.savez_compressed(
-            filename, data=obj.values, index=obj.index.values, columns=obj.columns.values
+            filename,
+            data=obj.values,
+            index=obj.index.values,
+            columns=obj.columns.values,
         )
 
 
