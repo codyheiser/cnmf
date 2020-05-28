@@ -41,7 +41,7 @@ def parallel(args):
     # Run factorize
     workind = " ".join([str(x) for x in range(argdict["n_jobs"])])
     factorize_cmd = (
-        "nohup parallel --bar cnmf factorize --output-dir %s --name %s --worker-index {} ::: %s"
+        "nohup parallel cnmf factorize --output-dir %s --name %s --worker-index {} ::: %s"
         % (argdict["output_dir"], argdict["name"], workind)
     )
     print("Running iterative NMF:  {}".format(factorize_cmd))
