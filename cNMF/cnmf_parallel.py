@@ -35,7 +35,7 @@ def parallel(args):
     ]
     prepare_cmd = "cnmf prepare {} ".format(counts_arg)
     prepare_cmd += " ".join(prepare_opts)
-    print("Running preparation:\n\t{}".format(prepare_cmd))
+    print("Preparing directories and preprocessing:  {}".format(prepare_cmd))
     sp.call(prepare_cmd, shell=True)
 
     # Run factorize
@@ -44,7 +44,7 @@ def parallel(args):
         "nohup parallel cnmf factorize --output-dir %s --name %s --worker-index {} ::: %s"
         % (argdict["output_dir"], argdict["name"], workind)
     )
-    print("Running iterative NMF:\n\t{}".format(factorize_cmd))
+    print("Running iterative NMF:  {}".format(factorize_cmd))
     sp.call(factorize_cmd, shell=True)
 
     # Run combine
@@ -53,7 +53,7 @@ def parallel(args):
         argdict["name"],
         argdict["components"],
     )
-    print("Combining NMF replicates:\n\t{}".format(combine_cmd))
+    print("Combining NMF replicates:  {}".format(combine_cmd))
     sp.call(combine_cmd, shell=True)
 
     # Plot K selection
@@ -61,7 +61,7 @@ def parallel(args):
         argdict["output_dir"],
         argdict["name"],
     )
-    print("Plotting K selection parameters:\n\t{}".format(Kselect_cmd))
+    print("Plotting K selection parameters:  {}".format(Kselect_cmd))
     sp.call(Kselect_cmd, shell=True)
 
     # Delete individual iteration files
@@ -69,7 +69,7 @@ def parallel(args):
         argdict["output_dir"],
         argdict["name"],
     )
-    print("Cleaning up workspace:\n\t{}".format(clean_cmd))
+    print("Cleaning up workspace:  {}".format(clean_cmd))
     sp.call(clean_cmd, shell=True)
 
     if argdict["auto_k"]:
@@ -83,7 +83,7 @@ def parallel(args):
             consensus_cmd = " ".join([consensus_cmd, "--show-clustering"])
         if argdict["cleanup"]:
             consensus_cmd = " ".join([consensus_cmd, "--cleanup"])
-        print("Building consensus factors:\n\t{}".format(consensus_cmd))
+        print("Building consensus factors:  {}".format(consensus_cmd))
         sp.call(consensus_cmd, shell=True)
 
 

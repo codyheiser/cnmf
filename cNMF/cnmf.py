@@ -16,6 +16,7 @@ import itertools
 import yaml
 import subprocess
 import scipy.sparse as sp
+import warnings
 
 from scipy.spatial.distance import squareform
 from sklearn.decomposition import non_negative_factorization
@@ -33,9 +34,11 @@ from ._version import get_versions
 
 
 def save_df_to_npz(obj, filename):
-    np.savez_compressed(
-        filename, data=obj.values, index=obj.index.values, columns=obj.columns.values
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", UserWarning)
+        np.savez_compressed(
+            filename, data=obj.values, index=obj.index.values, columns=obj.columns.values
+        )
 
 
 def save_df_to_text(obj, filename):
@@ -43,8 +46,10 @@ def save_df_to_text(obj, filename):
 
 
 def load_df_from_npz(filename):
-    with np.load(filename, allow_pickle=True) as f:
-        obj = pd.DataFrame(**f)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", UserWarning)
+        with np.load(filename, allow_pickle=True) as f:
+            obj = pd.DataFrame(**f)
     return obj
 
 

@@ -2,9 +2,7 @@
 
 [![Latest Version][tag-version]][repo-url]
 
-cNMF is an analysis pipeline for inferring gene expression programs from single-cell RNA-Seq (scRNA-Seq) data.
-
-It takes a count matrix (N cells X G genes) as input and produces a (K x G) matrix of gene expression programs (GEPs) and a (N x K) matrix specifying the usage of each program for each cell in the data.
+cNMF is an analysis pipeline for inferring gene expression programs from single-cell RNA-Seq (scRNA-Seq) data. It takes a counts matrix (N cells X G genes) as input and produces a (K x G) matrix of gene expression programs (GEPs) and a (N x K) matrix specifying the usage of each program for each cell in the data.
 
 You can read more about the method in [Kotliar, et al. 2019](https://elifesciences.org/articles/43803).
 
@@ -23,8 +21,6 @@ This cNMF code is designed to be agnostic to the method of parallelization. It d
 
 You specify the total number of jobs in the prepare command (step 1) with the `--n-jobs` flag. Then, for step 2 you run all of the jobs for a specific worker using the `--worker-index` flag. Step 3 combines the results files that were output by all of the workers. The workers are indexed from 0 to (`n-jobs` - 1).
 
-We provide example commands in the [simulated dataset tutorial](#analyze_simulated_example_data.ipynb) and the [PBMC dataset tutorial](#analyze_pbmc_example_data.ipynb) for distributing the tasks over multiple cores on a large machine with [GNU parallel](https://www.gnu.org/software/parallel/) as well as for distributing them to multiple nodes on an UGER compute cluster. By default, the  tutorials do not use any parallelization but simply provide the commands that would be used to run the steps in parallel.
-
 The following terminal command will show all arguments for parallel processing:
 ```
 cnmf_p -h
@@ -32,21 +28,20 @@ cnmf_p -h
 
 # Input data and Scanpy
 Input counts data can be provided to cNMF in 2 ways:
-
 1. as a raw tab-delimited text file containing row labels with cell IDs (barcodes) and column labels as gene IDs
-2. as a scanpy file ending in .h5ad containg counts as the data feature. See the PBMC dataset tutorial for an example of how to generate the Scanpy object from the data provided by 10X. Because Scanpy uses sparse matrices by default, the .h5ad data structure can take up much less memory than the raw counts matrix and can be much faster to load.
+2. as a scanpy file ending in `.h5ad` containg counts as the data feature. Because Scanpy uses sparse matrices by default, the .h5ad data structure can take up much less memory than the raw counts matrix and is much faster to load.
 
 # Step by step guide 
-You can see all possible command line options by running
+You can see all possible command line options by running:
 ```
-cnmf -h
+cnmf {prepare, factorize, combine, consensus, k_selection_plot} -h
 ```
-and see the [simulated dataset tutorial](Tutorials/analyze_simulated_example_data.ipynb) and the [PBMC dataset tutorial](Tutorials/analyze_pbmc_example_data.ipynb) for a step by step walkthrough with example data. We also describe the key ideas and parameters for each step below.
+See the [simulated dataset tutorial](Tutorials/analyze_simulated_example_data.ipynb) and the [PBMC dataset tutorial](Tutorials/analyze_pbmc_example_data.ipynb) for a step by step walkthrough with example data. We also describe the key ideas and parameters for each step below.
 
 ### Step 1 - normalize the input matrix and prepare the run parameters
 Example command:
 ```
-cnmf prepare ./example_data/counts_prefiltered.txt --output-dir ./example_data --name example_cNMF -k 5 6 7 8 9 10 11 12 13 --n-iter 100 --n-jobs 1 --seed 14 --numgenes 2000
+cnmf prepare ./example_data/counts_prefiltered.txt --output-dir ./example_data --name example_cNMF -k 5 6 7 8 9 10 11 12 13 -n 30 -j 1
 ```
 Path structure
   - `--output-dir` - the output directory into which all results will be placed. Default: `.`
@@ -55,20 +50,22 @@ Path structure
 Input data
   - `counts` - path to the cell x gene counts file. This is expected to be a tab-delimited text file or a Scanpy object saved in the `.h5ad` format
   - `--tpm` [Optional] - Pre-computed Cell x Gene data in transcripts per million or other per-cell normalized data. If none is provided, TPM will be calculated automatically. This can be helpful if a particular normalization is desired. These can be loaded in the same formats as the counts file. Default: `None`
-  - `--genes-file` [Optional] - List of over-dispersed genes to be used for the factorization steps. If not provided, over-dispersed genes will be calculated automatically and the number of genes to use can be set by the --numgenes parameter below. Default: `None`
+  - `--genes-file` [Optional] - List of over-dispersed genes to be used for the factorization steps. If not provided, over-dispersed genes will be calculated automatically and the number of genes to use can be set by the `--numgenes` parameter below. Default: `None`
 
 Parameters
   - `-k` - space separated list of K values that will be tested for cNMF
-  - `--n-iter` -  number of NMF iterations to run for each K. Default: `100`
-  - `--n-jobs` - specifies how many workers (e.g. cores on a machine or nodes on a compute farm) can be used in parallel. Default: `1`
+  - `-n`, `--n-iter` - number of NMF iterations to run for each K.
+  - `-j`, `--n-jobs` - specifies how many workers (e.g. cores on a machine or nodes on a compute farm) can be used in parallel. Default: `1`
   - `--seed` - the master seed that will be used to generate the individual seed for each NMF replicate. Default: `None`
-  - `--numgenes` - the number of higest variance genes that will be used for running the factorization. Removing low variance genes helps amplify the signal and is an important factor in correctly inferring programs in the data. However, don't worry, at the end the spectra is re-fit to include estimates for all genes, even those that weren't included in the high-variance set. Default: 2000
+  - `--numgenes` - the number of higest variance genes that will be used for running the factorization. Removing low variance genes helps amplify the signal and is an important factor in correctly inferring programs in the data. However, don't worry, at the end the spectra is re-fit to include estimates for all genes, even those that weren't included in the high-variance set. Default: `2000`
   - `--beta-loss` - Loss function for NMF, from one of `frobenius`, `kullback-leibler`, `itakura-saito`. Default: `frobenius`
-  - `--densify` -- Flag indicating that unlike most single-cell RNA-Seq data, the input data is not sparse. Causes the data to be treated as dense. Not recommended for most single-cell RNA-Seq data Default: `False`
+  - `--densify` - flag indicating that unlike most single-cell RNA-Seq data, the input data is not sparse. Causes the data to be treated as dense. Not recommended for most single-cell RNA-Seq data Default: `False`
+  - `--subset` - column(s) in `.obs` of `.h5ad` counts file to subset dataset on before running cNMF. Can specify more than one as a list. Keeps cells with values of `1` or `True` in any of the respective columns.
+  - `-l`, `--layer` - key in `.layers` of `.h5ad` counts file to use for cNMF instead of `.X`.
 
 This command generates a filtered and normalized matrix for running the factorizations on. It first subsets the data down to a set of over-dispersed genes that can be provided as an input file or calculated here. While the final spectra will be computed for all of the genes in the input counts file, the factorization is much faster and can find better patterns if it only runs on a set of high-variance genes. A per-cell normalized input file may be provided as well so that the final gene expression programs can be computed with respect to that normalization.
 
-In addition, this command allocates specific factorization jobs to be run to distinct workers. The number of workers are specified by `--n-jobs`, and the total number of jobs is `--n-iter` X the number of `k`s being tested.
+In addition, this command allocates specific factorization jobs to be run to distinct workers. The number of workers are specified by `--n-jobs`, and the total number of jobs is `--n-iter` X the number of Ks being tested.
 
 In the example above, we are assuming that no parallelization is to be used (`--n-jobs` 1) and so all of the jobs are being allocated to a single worker.
 
@@ -79,7 +76,7 @@ Next NMF is run for all of the replicates specified in the previous command. The
 ```
 cnmf factorize --output-dir ./example_data --name example_cNMF --worker-index 0 
 ```
-This is running all of the jobs for worker 1. If you specified a single worker in the prepare step (`--n-jobs` 1) like in the command above, this will run all of the factorizations. However, if you specified more than 1 total worker, you would need to run the commands for those workers as well with separate commands, E.g.:
+This is running all of the jobs for worker 1. If you specified a single worker in the prepare step (`--n-jobs` 1) like in the command above, this will run all of the factorizations. However, if you specified more than 1 total worker, you would need to run the commands for those workers as well with separate commands, e.g.:
 ```
 cnmf factorize --output-dir ./example_data --name example_cNMF --worker-index 1 
 cnmf factorize --output-dir ./example_data --name example_cNMF --worker-index 2
@@ -91,18 +88,19 @@ __Tip: The implementation of NMF in scikit-learn by default will use more than 1
 
 ### Step 3 combine the individual spectra results files for each K into a merged file
 Since a separate file has been created for each replicate for each K, we combine the replicates for each K as below:
+
 Example command:
 ```
 cnmf combine --output-dir ./example_data --name example_cNMF
 ```
-After this, you can optionally delete the individual spectra files like so:
+After this, you can optionally delete the individual spectra files like so (running `cnmf_p` does this automatically):
 ```
 rm ./example_data/example_cNMF/cnmf_tmp/example_cNMF.spectra.k_*.iter_*.df.npz
 ```
 
 ### Step 4 select an optimal K by considering the trade-off between stability and error
-This will iterate through all of the values of K that have been run and will calculate the stability and error.
-It then outputs a PNG image file plotting this relationship into the output_dir/name directory
+This will iterate through all of the values of K that have been run and will calculate the stability and error. It then outputs a `.png` image file plotting this relationship into the output_dir/name directory.
+
 Example command:
 ```
 cnmf k_selection_plot --output-dir ./example_data --name example_cNMF
@@ -110,40 +108,32 @@ cnmf k_selection_plot --output-dir ./example_data --name example_cNMF
 This outputs a K selection plot to example_data/example_cNMF/example_cNMF.k_selection.png. There is no universally definitive criteria for choosing K but we will typically use the largest value that is reasonably stable and/or a local maximum in stability. See the discussion and methods section and the response to reviewer comments in [the manuscript](https://elifesciences.org/articles/43803) for more discussion about selecting K.
 
 ### Step 5 obtain consensus estimates for the programs and their usages at the desired value of K
-The last step is to cluster the spectra after first optionally filtering out ouliers. This step ultimately outputs 4 files:
+The last step is to cluster the spectra after first optionally filtering out outliers. This step outputs 4 files:
     - GEP estimate in units of TPM
     - GEP estimate in units of TPM Z-scores, reflecting whether having a higher usage of a program would be expected to decrease or increase gene expression)
     - Unnormalized GEP usage estimate. 
     - Clustergram diagnostic plot, showing how much consensus there is amongst the replicates and a histogram of distances between each spectra and its K nearest neighbors 
 
-We recommend that you use the diagnostic plot to determine the threshold to filter outliers. By default cNMF sets the number of neighbors to use for this filtering as 30% of the number of iterations done. But this can be modified from the command line.
-
-In practice, we tend to run this command twice, once with `--local-density-threshold` 2.00 to see what the distribution of average distances looks like, and then a second time with `--local-density-threshold` set to a smaller value determined based on this histogram to filter out outliers. See the tutorials for examples of this.
+We recommend that you use the diagnostic plot to determine the threshold to filter outliers. By default cNMF sets the number of neighbors to use for this filtering as 30% of the number of iterations done (`0.30`). This can be modified from the command line.
 
 Example command:
 ```
-cnmf consensus --output-dir ./example_data --name example_cNMF --components 10 --local-density-threshold 0.01 --show-clustering
+cnmf consensus --output-dir ./example_data --name example_cNMF --local-density-threshold 0.05 --show-clustering --auto-k --cleanup
 ```
-  - `--components` - value of K to compute consensus clusters for. Must be among the options provided to the prepare step
+  - `-k` - value(s) of K to compute consensus clusters for. Must be among the options provided to the prepare step
   - `--local-density-threshold` - the threshold on average distance to K nearest neighbors to use. 2.0 or above means that nothing will be filtered out. Default: 0.5
   - `--local-neighborhood-size` - Percentage of replicates to consider as nearest neighbors for local density filtering. E.g. if you run 100 replicates, and set this to .3, 30 nearest neighbors will be used for outlier detection. Default: 0.3
-  - `--show-clustering` - Controls whether or not the clustergram image is output. Default: False
+  - `--show-clustering` - Controls whether or not the clustergram image is output. Default: `False`
+  - `--auto-k` - pick K value automatically from output of `combine`. Chooses K with highest stability value to run consensus on.
+  - `--cleanup` - removes unnecessary files from output directory, while still allowing for running `consensus` again on results of `combine`.
 
-By the end of this step, you should have the following results files in your directory:
-   - Z-score unit gene expression program matrix - `example_data/example_cNMF/example_cNMF.gene_spectra_score.k_10.dt_0_01.txt`
-   - TPM unit gene expression program  matrix - `example_data/example_cNMF/example_cNMF.gene_spectra_tpm.k_10.dt_0_01.txt`
-   - Usage matrix `example_data/example_cNMF/example_cNMF.usages.k_10.dt_0_01.consensus.txt`
-   - Diagnostic plot - `example_data/example_cNMF/example_cNMF.clustering.k_10.dt_0_01.png`
-
-See the tutorials for some subsequent analysis steps that could be used to analyze these results files once they are created.
-
-# Updates from version 1.1 (D Kotliar)
- - packaging and command-line entrypoints for `cnmf` and `cnmf_p` (parallel)
- - Saves results of **consensus** in `.h5ad` file
- - `--auto-k` option to choose **k** value with highest stability and automatically perform **consensus**
- - `--cleanup` flag to remove unneccesary clutter, while maintaining ability to run **consensus** manually without re-running **prepare** or **factorize**
- - `--subset` argument to take subset of AnnData object based on `.obs` label(s) prior to cNMF
- - `--layer` argument to use another matrix from `.layers` of AnnData object instead of `.X`
+### Results
+cNMF deposits an `.h5ad` file in `output-dir/name/` for each `consensus` run on a particular K value, e.g. `example_data_k10_dt0_05.h5ad` for the above commands. This AnnData object can easily be read using Scanpy, and has the following attributes:
+  - raw counts from original file in `.X` slot
+  - NMF usages normalized within each cell (N x K fractional usages) in `.obsm["cnmf_usages"]`. This can be used to prime dimension-reduced embeddings such as PCA, t-SNE, and UMAP.
+  - NMF usages for each cell as columns of `.obs`, used for plotting - `.obs[["usage_1","usage_2","usage_3",...]]`.
+  - GEP spectra describing the loadings for each overdispersed gene in all K factors - `.varm["cnmf_spectra"]`.
+  - ranked GEP loadings showing top genes in each factor - `.uns["cnmf_markers"]`.
 
 [tag-version]: https://img.shields.io/github/v/tag/codyheiser/cNMF
 [repo-url]: https://pypi.python.org/pypi/dropkick/
