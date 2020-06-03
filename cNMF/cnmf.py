@@ -752,7 +752,7 @@ class cNMF:
         k,
         density_threshold_str="0.5",
         local_neighborhood_size=0.30,
-        show_clustering=False,
+        show_clustering=True,
         skip_density_and_return_after_stats=False,
         close_clustergram_fig=True,
     ):
@@ -1253,7 +1253,6 @@ def consensus(args):
             k,
             argdict["local_density_threshold"],
             argdict["local_neighborhood_size"],
-            argdict["show_clustering"],
         )
         tpm = sc.read(cnmf_obj.paths["tpm"])
         tpm.X = tpm.layers["raw_counts"].copy()
@@ -1511,12 +1510,6 @@ def main():
         type=float,
         help="Fraction of the number of replicates to use as nearest neighbors for local density filtering",
         default=0.30,
-    )
-    consensus_parser.add_argument(
-        "--show-clustering",
-        dest="show_clustering",
-        help="Produce a clustergram figure summarizing the spectra clustering",
-        action="store_true",
     )
     consensus_parser.add_argument(
         "--cleanup",

@@ -79,8 +79,6 @@ def parallel(args):
             local_dens_thresh_arg,
             local_neighborhood_size_arg,
         )
-        if argdict["show_clustering"]:
-            consensus_cmd = " ".join([consensus_cmd, "--show-clustering"])
         if argdict["cleanup"]:
             consensus_cmd = " ".join([consensus_cmd, "--cleanup"])
         print("Building consensus factors:  {}".format(consensus_cmd))
@@ -201,12 +199,6 @@ def main():
         type=float,
         help="Fraction of the number of replicates to use as nearest neighbors for local density filtering",
         default=0.30,
-    )
-    parser.add_argument(
-        "--show-clustering",
-        dest="show_clustering",
-        help="Produce a clustergram figure summarizing the spectra clustering",
-        action="store_true",
     )
     parser.add_argument(
         "--cleanup",
