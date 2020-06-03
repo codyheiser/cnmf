@@ -898,6 +898,10 @@ class cNMF:
         norm_usages = rf_usages.div(rf_usages.sum(axis=1), axis=0)
         refit_nmf_kwargs.update(dict(H=norm_usages.T.values,))
 
+        # ensure dtypes match for factorization
+        if norm_usages.values.dtype != tpm.X.dtype:
+            tpm.X = tpm.X.astype(norm_usages.values.dtype)
+
         _, spectra_tpm = self._nmf(tpm.X.T, nmf_kwargs=refit_nmf_kwargs)
         spectra_tpm = pd.DataFrame(
             spectra_tpm.T, index=rf_usages.columns, columns=tpm.var.index
