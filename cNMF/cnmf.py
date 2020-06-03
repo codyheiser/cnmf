@@ -821,6 +821,10 @@ class cNMF:
             dict(n_components=k, H=median_spectra.values, update_H=False)
         )
 
+        # ensure dtypes match for factorization
+        if median_spectra.values.dtype != norm_counts.X.dtype:
+            norm_counts.X = norm_counts.X.astype(median_spectra.values.dtype)
+
         _, rf_usages = self._nmf(norm_counts.X, nmf_kwargs=refit_nmf_kwargs)
         rf_usages = pd.DataFrame(
             rf_usages, index=norm_counts.obs.index, columns=median_spectra.index
