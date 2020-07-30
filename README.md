@@ -136,4 +136,4 @@ cNMF deposits an `.h5ad` file in `output-dir/name/` for each `consensus` run on 
   - ranked GEP loadings showing top genes in each factor - `.uns["cnmf_markers"]`.
 
 [tag-version]: https://img.shields.io/github/v/tag/codyheiser/cNMF
-[repo-url]: https://pypi.python.org/pypi/dropkick/
+[repo-url]: https://github.com/codyheiser/cNMF
