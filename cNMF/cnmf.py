@@ -244,7 +244,9 @@ def subset_adata(adata, subset):
     adata.obs["adata_subset_combined"] = 0
     # create label as union of given subset args
     for i in range(len(subset)):
-        adata.obs.loc[adata.obs[subset[i]] == 1, "adata_subset_combined"] = 1
+        adata.obs.loc[
+            adata.obs[subset[i]].isin(["True", True, 1.0, 1]), "adata_subset_combined"
+        ] = 1
     adata = adata[adata.obs["adata_subset_combined"] == 1, :].copy()
     adata.obs.drop(columns="adata_subset_combined", inplace=True)
     print(" - now {} cells and {} genes".format(adata.n_obs, adata.n_vars))
@@ -1258,9 +1260,7 @@ def consensus(args):
     for k in ks:
         merged_spectra = load_df_from_npz(cnmf_obj.paths["merged_spectra"] % k)
         cnmf_obj.consensus(
-            k,
-            argdict["local_density_threshold"],
-            argdict["local_neighborhood_size"],
+            k, argdict["local_density_threshold"], argdict["local_neighborhood_size"],
         )
         tpm = sc.read(cnmf_obj.paths["tpm"])
         tpm.X = tpm.layers["raw_counts"].copy()
