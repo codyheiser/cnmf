@@ -329,7 +329,9 @@ def cnmf_load_results(adata, cnmf_dir, name, k, dt, key="cnmf", **kwargs):
 
     # read in overdispersed genes determined by cNMF and add as metadata to adata.var
     overdispersed = np.genfromtxt(
-        "{}/{}/{}.overdispersed_genes.txt".format(cnmf_dir, name, name), dtype=str
+        "{}/{}/{}.overdispersed_genes.txt".format(cnmf_dir, name, name),
+        delimiter="\t",
+        dtype=str,
     )
     adata.var["cnmf_overdispersed"] = 0
     adata.var.loc[
