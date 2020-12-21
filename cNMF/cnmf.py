@@ -1337,14 +1337,14 @@ def main():
     prepare_parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/...",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     prepare_parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/...",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
         nargs="?",
         default=".",
     )
@@ -1352,14 +1352,14 @@ def main():
         "-j",
         "--n-jobs",
         type=int,
-        help="Total number of workers to distribute jobs to",
+        help="Total number of workers to distribute jobs to. Default 1.",
         default=1,
     )
     prepare_parser.add_argument(
         "-k",
         "--components",
         type=int,
-        help='Numper of components (k) for matrix factorization. Several can be specified with "-k 8 9 10"',
+        help='Number of components (k) for matrix factorization. Several can be specified with "-k 8 9 10". Default range(7,18).',
         nargs="*",
         default=[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
     )
@@ -1367,12 +1367,12 @@ def main():
         "-n",
         "--n-iter",
         type=int,
-        help="Numper of factorization replicates",
-        default=50,
+        help="Number of factorization replicates. Default 30.",
+        default=30,
     )
     prepare_parser.add_argument(
         "--subset",
-        help="AnnData.obs column name to subset on before performing NMF. Cells to keep should be True or 1",
+        help="AnnData.obs column name to subset on before performing NMF. Cells to keep should be True or 1.",
         nargs="*",
     )
     prepare_parser.add_argument(
@@ -1383,7 +1383,10 @@ def main():
         help="Key from .layers to use. Default '.X'.",
     )
     prepare_parser.add_argument(
-        "--seed", type=int, help="Seed for pseudorandom number generation", default=18,
+        "--seed",
+        type=int,
+        help="Seed for pseudorandom number generation. Default 18.",
+        default=18,
     )
     prepare_parser.add_argument(
         "--genes-file",
@@ -1394,7 +1397,7 @@ def main():
     prepare_parser.add_argument(
         "--numgenes",
         type=int,
-        help="Number of high variance genes to use for matrix factorization.",
+        help="Number of high variance genes to use for matrix factorization. Default 2000.",
         default=2000,
     )
     prepare_parser.add_argument(
@@ -1407,7 +1410,7 @@ def main():
         "--beta-loss",
         type=str,
         choices=["frobenius", "kullback-leibler", "itakura-saito"],
-        help="Loss function for NMF.",
+        help="Loss function for NMF. Default 'frobenius'.",
         default="frobenius",
     )
     prepare_parser.add_argument(
@@ -1425,14 +1428,14 @@ def main():
     factorize_parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/...",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     factorize_parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/...",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
         nargs="?",
         default=".",
     )
@@ -1440,13 +1443,13 @@ def main():
         "-j",
         "--n-jobs",
         type=int,
-        help="Total number of workers to distribute jobs to",
+        help="Total number of workers to distribute jobs to. Default 1.",
         default=1,
     )
     factorize_parser.add_argument(
         "--worker-index",
         type=int,
-        help="Index of current worker (the first worker should have index 0)",
+        help="Index of current worker (the first worker should have index 0). Default 0.",
         default=0,
     )
     factorize_parser.set_defaults(func=factorize)
@@ -1458,14 +1461,14 @@ def main():
     combine_parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/...",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     combine_parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/...",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
         nargs="?",
         default=".",
     )
@@ -1473,7 +1476,7 @@ def main():
         "-k",
         "--components",
         type=int,
-        help='Number of components (k) for matrix factorization. Several can be specified with "-k 8 9 10"',
+        help='Number of components (k) for matrix factorization. Several can be specified with "-k 8 9 10". Default range(7,18).',
         nargs="*",
         default=[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
     )
@@ -1485,14 +1488,14 @@ def main():
     consensus_parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/...",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     consensus_parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/...",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
         nargs="?",
         default=".",
     )
@@ -1500,7 +1503,7 @@ def main():
         "-k",
         "--components",
         type=int,
-        help='Numper of components (k) for matrix factorization. Several can be specified with "-k 8 9 10"',
+        help='Numper of components (k) for matrix factorization. Several can be specified with "-k 8 9 10". Default range(7,18).',
         nargs="*",
         default=[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
     )
@@ -1512,13 +1515,13 @@ def main():
     consensus_parser.add_argument(
         "--local-density-threshold",
         type=str,
-        help="Threshold for the local density filtering. This string must convert to a float >0 and <=2",
+        help="Threshold for the local density filtering. This string must convert to a float >0 and <=2. Default 0.1.",
         default="0.1",
     )
     consensus_parser.add_argument(
         "--local-neighborhood-size",
         type=float,
-        help="Fraction of the number of replicates to use as nearest neighbors for local density filtering",
+        help="Fraction of the number of replicates to use as nearest neighbors for local density filtering. Default 0.3.",
         default=0.30,
     )
     consensus_parser.add_argument(
@@ -1535,14 +1538,14 @@ def main():
     k_selection_parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/...",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     k_selection_parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/...",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
         nargs="?",
         default=".",
     )

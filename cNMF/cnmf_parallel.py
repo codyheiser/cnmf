@@ -97,20 +97,20 @@ def main():
         "counts",
         type=str,
         nargs="?",
-        help="Input (cell x gene) counts matrix as .h5ad, df.npz, or tab delimited text file",
+        help="Input (cell x gene) counts matrix as .h5ad, df.npz, or tab delimited text file.",
     )
 
     parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/...",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/...",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
         nargs="?",
         default=".",
     )
@@ -118,14 +118,14 @@ def main():
         "-j",
         "--n-jobs",
         type=int,
-        help="Total number of workers to distribute jobs to",
+        help="Total number of workers to distribute jobs to. Default 1.",
         default=1,
     )
     parser.add_argument(
         "-k",
         "--components",
         type=int,
-        help='Number of components (k) for matrix factorization. Several can be specified with "-k 8 9 10"',
+        help='Number of components (k) for matrix factorization. Several can be specified with "-k 8 9 10". Default range(7,18).',
         nargs="*",
         default=[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
     )
@@ -133,12 +133,12 @@ def main():
         "-n",
         "--n-iter",
         type=int,
-        help="Number of factorization replicates",
-        default=50,
+        help="Number of factorization replicates. Default 30.",
+        default=30,
     )
     parser.add_argument(
         "--subset",
-        help="AnnData.obs column name to subset on before performing NMF. Cells to keep should be True or 1",
+        help="AnnData.obs column name to subset on before performing NMF. Cells to keep should be True or 1.",
         nargs="*",
     )
     parser.add_argument(
@@ -149,7 +149,10 @@ def main():
         help="Key from .layers to use. Default '.X'.",
     )
     parser.add_argument(
-        "--seed", type=int, help="Seed for pseudorandom number generation", default=18,
+        "--seed",
+        type=int,
+        help="Seed for pseudorandom number generation. Default 18.",
+        default=18,
     )
     parser.add_argument(
         "--genes-file",
@@ -160,26 +163,26 @@ def main():
     parser.add_argument(
         "--numgenes",
         type=int,
-        help="Number of high variance genes to use for matrix factorization.",
+        help="Number of high variance genes to use for matrix factorization. Default 2000.",
         default=2000,
     )
     parser.add_argument(
         "--tpm",
         type=str,
-        help="Pre-computed (cell x gene) TPM values as df.npz or tab separated txt file. If not provided TPM will be calculated automatically",
+        help="Pre-computed (cell x gene) TPM values as df.npz or tab separated txt file. If not provided TPM will be calculated automatically.",
         default=None,
     )
     parser.add_argument(
         "--beta-loss",
         type=str,
         choices=["frobenius", "kullback-leibler", "itakura-saito"],
-        help="Loss function for NMF.",
+        help="Loss function for NMF. Default 'frobenius'.",
         default="frobenius",
     )
     parser.add_argument(
         "--densify",
         dest="densify",
-        help="[prepare] Treat the input data as non-sparse",
+        help="Treat the input data as non-sparse",
         action="store_true",
         default=False,
     )
@@ -191,13 +194,13 @@ def main():
     parser.add_argument(
         "--local-density-threshold",
         type=str,
-        help="Threshold for the local density filtering. This string must convert to a float >0 and <=2",
+        help="Threshold for the local density filtering. This string must convert to a float >0 and <=2. Default 0.1.",
         default="0.1",
     )
     parser.add_argument(
         "--local-neighborhood-size",
         type=float,
-        help="Fraction of the number of replicates to use as nearest neighbors for local density filtering",
+        help="Fraction of the number of replicates to use as nearest neighbors for local density filtering. Default 0.3.",
         default=0.30,
     )
     parser.add_argument(
