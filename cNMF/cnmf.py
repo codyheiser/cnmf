@@ -270,7 +270,10 @@ def cnmf_markers(adata, spectra_score_file, n_genes=30, key="cnmf"):
     """
     # load Z-scored GEPs which reflect gene enrichment, save to adata.varm
     spectra = pd.read_csv(spectra_score_file, sep="\t", index_col=0).T
-    adata.varm["{}_spectra".format(key)] = spectra.loc[adata.var_names, :].values
+    spectra = adata.var[[]].merge(
+        spectra, how="left", left_index=True, right_index=True
+    )
+    adata.varm["{}_spectra".format(key)] = spectra.values
     # obtain top n_genes for each GEP in sorted order and combine them into df
     top_genes = []
     for gep in spectra.columns:
