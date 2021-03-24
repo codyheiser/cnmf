@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-consensus non-negative matrix factorization (cNMF) adapted from (Kotliar, et al. 2019)
+Consensus non-negative matrix factorization (cNMF) adapted from (Kotliar, et al. 2019)
 
 @author: C Heiser
-2020
 """
 import numpy as np
 import pandas as pd
@@ -255,18 +254,31 @@ def subset_adata(adata, subset):
 
 def cnmf_markers(adata, spectra_score_file, n_genes=30, key="cnmf"):
     """
-    read in gene spectra score output from cNMF and save top gene loadings 
-    for each usage as dataframe in adata.uns
+    Read cNMF spectra into AnnData object
 
-    Parameters:
-        adata (AnnData.AnnData): AnnData object
-        spectra_score_file (str): '<name>.gene_spectra_score.<k>.<dt>.txt' file from cNMF containing gene loadings
-        n_genes (int): number of top genes to list for each usage (rows of df)
-        key (str): prefix of adata.uns keys to save
+    Reads in gene spectra score output from cNMF and saves top gene loadings for 
+    each usage as dataframe in adata.uns
 
-    Returns:
-        AnnData.AnnData: adata is edited in place to include gene spectra scores
-        (adata.varm["cnmf_spectra"]) and list of top genes by spectra score (adata.uns["cnmf_markers"])
+    Parameters
+    ----------
+
+    adata : AnnData.AnnData
+        AnnData object
+    spectra_score_file : str
+        '<name>.gene_spectra_score.<k>.<dt>.txt' file from cNMF containing gene 
+        loadings
+    n_genes : int, optional (default=30)
+        number of top genes to list for each usage (rows of df)
+    key : str, optional (default="cnmf")
+        prefix of adata.uns keys to save
+
+    Returns
+    -------
+
+    adata : AnnData.AnnData
+        adata is edited in place to include gene spectra scores 
+        (adata.varm["cnmf_spectra"]) and list of top genes by spectra score 
+        (adata.uns["cnmf_markers"])
     """
     # load Z-scored GEPs which reflect gene enrichment, save to adata.varm
     spectra = pd.read_csv(spectra_score_file, sep="\t", index_col=0).T
@@ -288,26 +300,40 @@ def cnmf_markers(adata, spectra_score_file, n_genes=30, key="cnmf"):
 
 def cnmf_load_results(adata, cnmf_dir, name, k, dt, key="cnmf", **kwargs):
     """
-    Load results of cNMF.
-    Given adata object and corresponding cNMF output (cnmf_dir, name, k, dt to identify),
-    read in relevant results and save to adata object inplace, and output plot of gene
-    loadings for each GEP usage.
+    Load results of cNMF
 
-    Parameters:
-        adata (AnnData.AnnData): AnnData object
-        cnmf_dir (str): relative path to directory containing cNMF outputs
-        name (str): name of cNMF replicate
-        k (int): value used for consensus factorization
-        dt (int): distance threshold value used for consensus clustering
-        key (str): prefix of adata.uns keys to save
-        n_points (int): how many top genes to include in rank_genes() plot
-        **kwargs: keyword args to pass to cnmf_markers()
+    Given adata object and corresponding cNMF output (cnmf_dir, name, k, dt to 
+    identify), read in relevant results and save to adata object inplace, and 
+    output plot of gene loadings for each GEP usage.
 
-    Returns:
-        AnnData.AnnData: adata is edited in place to include overdispersed genes
-            (adata.var["cnmf_overdispersed"]), usages (adata.obs["usage_#"],
-            adata.obsm["cnmf_usages"]), gene spectra scores (adata.varm["cnmf_spectra"]),
-            and list of top genes by spectra score (adata.uns["cnmf_markers"]).
+    Parameters
+    ----------
+
+    adata : AnnData.AnnData
+        AnnData object
+    cnmf_dir : str
+        relative path to directory containing cNMF outputs
+    name : str
+        name of cNMF replicate
+    k : int
+        value used for consensus factorization
+    dt : int
+        distance threshold value used for consensus clustering
+    key : str, optional (default="cnmf")
+        prefix of adata.uns keys to save
+    n_points : int
+        how many top genes to include in rank_genes() plot
+    **kwargs : optional (default=None)
+        keyword args to pass to cnmf_markers()
+
+    Returns
+    -------
+
+    adata : AnnData.AnnData
+        adata is edited in place to include overdispersed genes 
+        (adata.var["cnmf_overdispersed"]), usages (adata.obs["usage_#"], 
+        adata.obsm["cnmf_usages"]), gene spectra scores (adata.varm["cnmf_spectra"]), 
+        and list of top genes by spectra score (adata.uns["cnmf_markers"]).
     """
     # read in cell usages
     usage = pd.read_csv(
@@ -353,6 +379,11 @@ def cnmf_load_results(adata, cnmf_dir, name, k, dt, key="cnmf", **kwargs):
 
 
 class cNMF:
+    """
+    Consensus NMF object
+
+    Containerizes the cNMF inputs and outputs to allow for easy pipelining
+    """
     def __init__(self, output_dir=".", name=None):
         """
         Parameters
@@ -588,8 +619,7 @@ class cNMF:
         self, ks, n_iter=100, random_state_seed=None, beta_loss="kullback-leibler"
     ):
         """
-        Create a DataFrame with parameters for NMF iterations.
-
+        Creates a DataFrame with parameters for NMF iterations
 
         Parameters
         ----------
@@ -603,7 +633,6 @@ class cNMF:
 
         random_state_seed : int or None, optional (default=None)
             Seed for sklearn random state.
-
         """
 
         if type(ks) is int:
@@ -656,7 +685,6 @@ class cNMF:
 
         nmf_kwargs : dict,
             Arguments to be passed to ``non_negative_factorization``
-
         """
         (usages, spectra, niter) = non_negative_factorization(X, **nmf_kwargs)
 
@@ -666,13 +694,13 @@ class cNMF:
         self, worker_i=1, total_workers=1,
     ):
         """
-        Iteratively run NMF with prespecified parameters.
+        Iteratively runs NMF with prespecified parameters
 
-        Use the `worker_i` and `total_workers` parameters for parallelization.
+        Use the `worker_i` and `total_workers` parameters for parallelization. 
+        Generic kwargs for NMF are loaded from self.paths['nmf_run_parameters'], 
+        defaults below::
 
-        Generic kwargs for NMF are loaded from self.paths['nmf_run_parameters'], defaults below::
-
-            ``non_negative_factorization`` default arguments:
+            `non_negative_factorization` default arguments:
                 alpha=0.0
                 l1_ratio=0.0
                 beta_loss='kullback-leibler'
@@ -681,7 +709,8 @@ class cNMF:
                 max_iter=200
                 regularization=None
                 init='random'
-                random_state, n_components are both set by the prespecified self.paths['nmf_replicate_parameters'].
+                random_state, n_components are both set by the prespecified 
+                self.paths['nmf_replicate_parameters'].
 
 
         Parameters
@@ -693,7 +722,6 @@ class cNMF:
         run_params : pandas.DataFrame,
             Parameters for NMF iterations.
             (Output of ``prepare_nmf_iter_params``)
-
         """
         self._initialize_dirs()
         run_params = load_df_from_npz(self.paths["nmf_replicate_parameters"])

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-consensus non-negative matrix factorization (cNMF) adapted from (Kotliar, et al. 2019)
-entire pipeline run in parallel using GNU parallel
+Consensus non-negative matrix factorization (cNMF) adapted from (Kotliar, et al. 2019)
+
+Entire pipeline run in parallel using GNU parallel
 
 @author: C Heiser
-2020
 """
 import sys, os
 import subprocess as sp
