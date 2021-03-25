@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-package initialization
-
-@author: C Heiser
+Consensus Non-negative Matrix Factorization
 """
 from .cnmf import (
     cNMF,

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Consensus non-negative matrix factorization (cNMF) adapted from (Kotliar, et al. 2019)
-
-@author: C Heiser
 """
 import numpy as np
 import pandas as pd
@@ -33,6 +31,9 @@ from ._version import get_versions
 
 
 def save_df_to_npz(obj, filename):
+    """
+    Saves numpy array to `.npz` file
+    """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         np.savez_compressed(
@@ -44,10 +45,16 @@ def save_df_to_npz(obj, filename):
 
 
 def save_df_to_text(obj, filename):
+    """
+    Saves numpy array to tab-delimited text file
+    """
     obj.to_csv(filename, sep="\t")
 
 
 def load_df_from_npz(filename):
+    """
+    Loads numpy array from `.npz` file
+    """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         with np.load(filename, allow_pickle=True) as f:
@@ -238,6 +245,9 @@ def compute_tpm(input_counts):
 
 
 def subset_adata(adata, subset):
+    """
+    Subsets anndata object on one or more `.obs` columns
+    """
     print("Subsetting AnnData on {}".format(subset), end="")
     # initialize .obs column for choosing cells
     adata.obs["adata_subset_combined"] = 0
@@ -265,20 +275,20 @@ def cnmf_markers(adata, spectra_score_file, n_genes=30, key="cnmf"):
     adata : AnnData.AnnData
         AnnData object
     spectra_score_file : str
-        '<name>.gene_spectra_score.<k>.<dt>.txt' file from cNMF containing gene 
+        `<name>.gene_spectra_score.<k>.<dt>.txt` file from cNMF containing gene 
         loadings
     n_genes : int, optional (default=30)
         number of top genes to list for each usage (rows of df)
     key : str, optional (default="cnmf")
-        prefix of adata.uns keys to save
+        prefix of `adata.uns` keys to save
 
     Returns
     -------
 
     adata : AnnData.AnnData
         adata is edited in place to include gene spectra scores 
-        (adata.varm["cnmf_spectra"]) and list of top genes by spectra score 
-        (adata.uns["cnmf_markers"])
+        (`adata.varm["cnmf_spectra"]`) and list of top genes by spectra score 
+        (`adata.uns["cnmf_markers"]`)
     """
     # load Z-scored GEPs which reflect gene enrichment, save to adata.varm
     spectra = pd.read_csv(spectra_score_file, sep="\t", index_col=0).T
@@ -330,10 +340,11 @@ def cnmf_load_results(adata, cnmf_dir, name, k, dt, key="cnmf", **kwargs):
     -------
 
     adata : AnnData.AnnData
-        adata is edited in place to include overdispersed genes 
-        (adata.var["cnmf_overdispersed"]), usages (adata.obs["usage_#"], 
-        adata.obsm["cnmf_usages"]), gene spectra scores (adata.varm["cnmf_spectra"]), 
-        and list of top genes by spectra score (adata.uns["cnmf_markers"]).
+        `adata` is edited in place to include overdispersed genes 
+        (`adata.var["cnmf_overdispersed"]`), usages (`adata.obs["usage_#"]`, 
+        `adata.obsm["cnmf_usages"]`), gene spectra scores 
+        (`adata.varm["cnmf_spectra"]`), and list of top genes by spectra score 
+        (`adata.uns["cnmf_markers"]`).
     """
     # read in cell usages
     usage = pd.read_csv(
@@ -536,30 +547,30 @@ class cNMF:
         ----------
 
         counts : anndata.AnnData
-            Scanpy AnnData object (cells x genes) containing raw counts. Filtered such that
-            no genes or cells with 0 counts
-        
+            Scanpy AnnData object (cells x genes) containing raw counts. Filtered such 
+            that no genes or cells with 0 counts
+
         tpm : anndata.AnnData
-            Scanpy AnnData object (cells x genes) containing tpm normalized data matching
-            counts
+            Scanpy AnnData object (cells x genes) containing tpm normalized data 
+            matching counts
 
         high_variance_genes_filter : np.array, optional (default=None)
             A pre-specified list of genes considered to be high-variance.
             Only these genes will be used during factorization of the counts matrix.
             Must match the .var index of counts and tpm.
-            If set to None, high-variance genes will be automatically computed, using the
-            parameters below.
+            If set to None, high-variance genes will be automatically computed, using 
+            the parameters below.
 
         num_highvar_genes : int, optional (default=None)
-            Instead of providing an array of high-variance genes, identify this many most overdispersed genes
-            for filtering
+            Instead of providing an array of high-variance genes, identify this many 
+            most overdispersed genes for filtering
 
         Returns
         -------
 
         normcounts : anndata.AnnData, shape (cells, num_highvar_genes)
-            A counts matrix containing only the high variance genes and with columns (genes)normalized to unit
-            variance
+            A counts matrix containing only the high variance genes and with columns 
+            (genes) normalized to unit variance
 
         """
 
@@ -625,11 +636,12 @@ class cNMF:
         ----------
         ks : integer, or list-like.
             Number of topics (components) for factorization.
-            Several values can be specified at the same time, which will be run independently.
+            Several values can be specified at the same time, which will be run 
+            independently.
 
         n_iter : integer, optional (defailt=100)
-            Number of iterations for factorization. If several ``k`` are specified, this many
-            iterations will be run for each value of ``k``.
+            Number of iterations for factorization. If several `k` are specified, 
+            this many iterations will be run for each value of `k`.
 
         random_state_seed : int or None, optional (default=None)
             Seed for sklearn random state.
@@ -684,7 +696,7 @@ class cNMF:
             Normalized counts dataFrame to be factorized.
 
         nmf_kwargs : dict,
-            Arguments to be passed to ``non_negative_factorization``
+            Arguments to be passed to `non_negative_factorization`
         """
         (usages, spectra, niter) = non_negative_factorization(X, **nmf_kwargs)
 
@@ -697,7 +709,7 @@ class cNMF:
         Iteratively runs NMF with prespecified parameters
 
         Use the `worker_i` and `total_workers` parameters for parallelization. 
-        Generic kwargs for NMF are loaded from self.paths['nmf_run_parameters'], 
+        Generic kwargs for NMF are loaded from `self.paths['nmf_run_parameters']`, 
         defaults below::
 
             `non_negative_factorization` default arguments:
@@ -717,11 +729,11 @@ class cNMF:
         ----------
         norm_counts : pandas.DataFrame,
             Normalized counts dataFrame to be factorized.
-            (Output of ``normalize_counts``)
+            (Output of `normalize_counts`)
 
         run_params : pandas.DataFrame,
             Parameters for NMF iterations.
-            (Output of ``prepare_nmf_iter_params``)
+            (Output of `prepare_nmf_iter_params`)
         """
         self._initialize_dirs()
         run_params = load_df_from_npz(self.paths["nmf_replicate_parameters"])
@@ -1093,7 +1105,7 @@ class cNMF:
 
     def k_selection_plot(self, close_fig=True):
         """
-        Borrowed from Alexandrov Et Al. 2013 Deciphering Mutational Signatures
+        Borrowed from Alexandrov Et Al. 2013 Deciphering Mutational Signatures 
         publication in Cell Reports
         """
         run_params = load_df_from_npz(self.paths["nmf_replicate_parameters"])

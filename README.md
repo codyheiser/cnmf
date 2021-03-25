@@ -135,5 +135,9 @@ cNMF deposits an `.h5ad` file in `output-dir/name/` for each `consensus` run on 
   - GEP spectra describing the loadings for each overdispersed gene in all K factors - `.varm["cnmf_spectra"]`.
   - ranked GEP loadings showing top genes in each factor - `.uns["cnmf_markers"]`.
 
+---
+
+Full documentation is available at [codyheiser.github.io/cNMF](https://codyheiser.github.io/cNMF)
+
 [tag-version]: https://img.shields.io/github/v/tag/codyheiser/cNMF
 [repo-url]: https://github.com/codyheiser/cNMF
