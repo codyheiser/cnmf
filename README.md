@@ -137,7 +137,7 @@ cNMF deposits an `.h5ad` file in `output-dir/name/` for each `consensus` run on 
 
 ---
 
-Full documentation is available at [codyheiser.github.io/cNMF](https://codyheiser.github.io/cNMF)
+Full documentation is available at [codyheiser.github.io/cnmf/](https://codyheiser.github.io/cnmf/)
 
 [tag-version]: https://img.shields.io/github/v/tag/codyheiser/cNMF
 [repo-url]: https://github.com/codyheiser/cNMF
