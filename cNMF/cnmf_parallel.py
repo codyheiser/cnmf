@@ -3,7 +3,6 @@
 Entire cNMF pipeline run in parallel using GNU parallel adapted from 
 (Kotliar, et al. 2019)
 """
-import sys, os
 import subprocess as sp
 from ._version import get_versions
 
@@ -87,7 +86,10 @@ def main():
 
     parser = argparse.ArgumentParser(prog="cnmf_p")
     parser.add_argument(
-        "-V", "--version", action="version", version=get_versions()["version"],
+        "-V",
+        "--version",
+        action="version",
+        version=get_versions()["version"],
     )
 
     parser.add_argument(
