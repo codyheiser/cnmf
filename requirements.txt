@@ -4,3 +4,4 @@ h5py>=2.10.0
 scanpy>=1.4.4.post1
 scikit-learn>=0.22.2.post1
 PyYAML>=5.3
+numba>=0.55.2

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<meta name="generator" content="pdoc 0.9.2" />
+<meta name="generator" content="pdoc 0.10.0" />
 <title>cNMF.cnmf API documentation</title>
 <meta name="description" content="Consensus non-negative matrix factorization (cNMF) adapted from (Kotliar, et al. 2019)" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
@@ -35,7 +35,6 @@ import numpy as np
 import pandas as pd
 import os, errno
 import glob
-import shutil
 import datetime
 import uuid
 import itertools
@@ -48,8 +47,6 @@ from scipy.spatial.distance import squareform
 from sklearn.decomposition import non_negative_factorization
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-from sklearn.utils import sparsefuncs
-from sklearn.preprocessing import normalize
 
 from fastcluster import linkage
 from scipy.cluster.hierarchy import leaves_list
@@ -178,11 +175,11 @@ def get_highvar_genes_sparse(
 
     else:
         if not expected_fano_threshold:
-            T = 1.0 + gene_counts_fano[winsor_box].std()
+            T = 1.0 + gene_expected_fano[winsor_box].std()
         else:
             T = expected_fano_threshold
 
-        high_var_genes_ind = (fano_ratio &gt; T) &amp; (gene_counts_mean &gt; minimal_mean)
+        high_var_genes_ind = (fano_ratio &gt; T) &amp; (gene_mean &gt; minimal_mean)
 
     gene_counts_stats = pd.DataFrame(
         {
@@ -295,7 +292,7 @@ def cnmf_markers(adata, spectra_score_file, n_genes=30, key=&#34;cnmf&#34;):
     &#34;&#34;&#34;
     Read cNMF spectra into AnnData object
 
-    Reads in gene spectra score output from cNMF and saves top gene loadings for 
+    Reads in gene spectra score output from cNMF and saves top gene loadings for
     each usage as dataframe in adata.uns
 
     Parameters
@@ -304,7 +301,7 @@ def cnmf_markers(adata, spectra_score_file, n_genes=30, key=&#34;cnmf&#34;):
     adata : AnnData.AnnData
         AnnData object
     spectra_score_file : str
-        `&lt;name&gt;.gene_spectra_score.&lt;k&gt;.&lt;dt&gt;.txt` file from cNMF containing gene 
+        `&lt;name&gt;.gene_spectra_score.&lt;k&gt;.&lt;dt&gt;.txt` file from cNMF containing gene
         loadings
     n_genes : int, optional (default=30)
         number of top genes to list for each usage (rows of df)
@@ -315,8 +312,8 @@ def cnmf_markers(adata, spectra_score_file, n_genes=30, key=&#34;cnmf&#34;):
     -------
 
     adata : AnnData.AnnData
-        adata is edited in place to include gene spectra scores 
-        (`adata.varm[&#34;cnmf_spectra&#34;]`) and list of top genes by spectra score 
+        adata is edited in place to include gene spectra scores
+        (`adata.varm[&#34;cnmf_spectra&#34;]`) and list of top genes by spectra score
         (`adata.uns[&#34;cnmf_markers&#34;]`)
     &#34;&#34;&#34;
     # load Z-scored GEPs which reflect gene enrichment, save to adata.varm
@@ -341,8 +338,8 @@ def cnmf_load_results(adata, cnmf_dir, name, k, dt, key=&#34;cnmf&#34;, **kwargs
     &#34;&#34;&#34;
     Load results of cNMF
 
-    Given adata object and corresponding cNMF output (cnmf_dir, name, k, dt to 
-    identify), read in relevant results and save to adata object inplace, and 
+    Given adata object and corresponding cNMF output (cnmf_dir, name, k, dt to
+    identify), read in relevant results and save to adata object inplace, and
     output plot of gene loadings for each GEP usage.
 
     Parameters
@@ -369,10 +366,10 @@ def cnmf_load_results(adata, cnmf_dir, name, k, dt, key=&#34;cnmf&#34;, **kwargs
     -------
 
     adata : AnnData.AnnData
-        `adata` is edited in place to include overdispersed genes 
-        (`adata.var[&#34;cnmf_overdispersed&#34;]`), usages (`adata.obs[&#34;usage_#&#34;]`, 
-        `adata.obsm[&#34;cnmf_usages&#34;]`), gene spectra scores 
-        (`adata.varm[&#34;cnmf_spectra&#34;]`), and list of top genes by spectra score 
+        `adata` is edited in place to include overdispersed genes
+        (`adata.var[&#34;cnmf_overdispersed&#34;]`), usages (`adata.obs[&#34;usage_#&#34;]`,
+        `adata.obsm[&#34;cnmf_usages&#34;]`), gene spectra scores
+        (`adata.varm[&#34;cnmf_spectra&#34;]`), and list of top genes by spectra score
         (`adata.uns[&#34;cnmf_markers&#34;]`).
     &#34;&#34;&#34;
     # read in cell usages
@@ -424,6 +421,7 @@ class cNMF:
 
     Containerizes the cNMF inputs and outputs to allow for easy pipelining
     &#34;&#34;&#34;
+
     def __init__(self, output_dir=&#34;.&#34;, name=None):
         &#34;&#34;&#34;
         Parameters
@@ -576,29 +574,29 @@ class cNMF:
         ----------
 
         counts : anndata.AnnData
-            Scanpy AnnData object (cells x genes) containing raw counts. Filtered such 
+            Scanpy AnnData object (cells x genes) containing raw counts. Filtered such
             that no genes or cells with 0 counts
 
         tpm : anndata.AnnData
-            Scanpy AnnData object (cells x genes) containing tpm normalized data 
+            Scanpy AnnData object (cells x genes) containing tpm normalized data
             matching counts
 
         high_variance_genes_filter : np.array, optional (default=None)
             A pre-specified list of genes considered to be high-variance.
             Only these genes will be used during factorization of the counts matrix.
             Must match the .var index of counts and tpm.
-            If set to None, high-variance genes will be automatically computed, using 
+            If set to None, high-variance genes will be automatically computed, using
             the parameters below.
 
         num_highvar_genes : int, optional (default=None)
-            Instead of providing an array of high-variance genes, identify this many 
+            Instead of providing an array of high-variance genes, identify this many
             most overdispersed genes for filtering
 
         Returns
         -------
 
         normcounts : anndata.AnnData, shape (cells, num_highvar_genes)
-            A counts matrix containing only the high variance genes and with columns 
+            A counts matrix containing only the high variance genes and with columns
             (genes) normalized to unit variance
 
         &#34;&#34;&#34;
@@ -665,11 +663,11 @@ class cNMF:
         ----------
         ks : integer, or list-like.
             Number of topics (components) for factorization.
-            Several values can be specified at the same time, which will be run 
+            Several values can be specified at the same time, which will be run
             independently.
 
         n_iter : integer, optional (defailt=100)
-            Number of iterations for factorization. If several `k` are specified, 
+            Number of iterations for factorization. If several `k` are specified,
             this many iterations will be run for each value of `k`.
 
         random_state_seed : int or None, optional (default=None)
@@ -695,13 +693,13 @@ class cNMF:
         )
 
         _nmf_kwargs = dict(
-            alpha=0.0,
+            alpha_W=0.0,
             l1_ratio=0.0,
             beta_loss=beta_loss,
             solver=&#34;mu&#34;,
             tol=1e-4,
             max_iter=400,
-            regularization=None,
+            alpha_H=None,
             init=&#34;random&#34;,
         )
 
@@ -732,25 +730,27 @@ class cNMF:
         return (spectra, usages)
 
     def run_nmf(
-        self, worker_i=1, total_workers=1,
+        self,
+        worker_i=1,
+        total_workers=1,
     ):
         &#34;&#34;&#34;
         Iteratively runs NMF with prespecified parameters
 
-        Use the `worker_i` and `total_workers` parameters for parallelization. 
-        Generic kwargs for NMF are loaded from `self.paths[&#39;nmf_run_parameters&#39;]`, 
+        Use the `worker_i` and `total_workers` parameters for parallelization.
+        Generic kwargs for NMF are loaded from `self.paths[&#39;nmf_run_parameters&#39;]`,
         defaults below::
 
             `non_negative_factorization` default arguments:
-                alpha=0.0
+                alpha_W=0.0
                 l1_ratio=0.0
                 beta_loss=&#39;kullback-leibler&#39;
                 solver=&#39;mu&#39;
                 tol=1e-4,
                 max_iter=200
-                regularization=None
+                alpha_H=None
                 init=&#39;random&#39;
-                random_state, n_components are both set by the prespecified 
+                random_state, n_components are both set by the prespecified
                 self.paths[&#39;nmf_replicate_parameters&#39;].
 
 
@@ -972,7 +972,11 @@ class cNMF:
         # Convert spectra to TPM units, and obtain results for all genes by running
         # last step of NMF with usages fixed and TPM as the input matrix
         norm_usages = rf_usages.div(rf_usages.sum(axis=1), axis=0)
-        refit_nmf_kwargs.update(dict(H=norm_usages.T.values,))
+        refit_nmf_kwargs.update(
+            dict(
+                H=norm_usages.T.values,
+            )
+        )
 
         # ensure dtypes match for factorization
         if norm_usages.values.dtype != tpm.X.dtype:
@@ -1134,7 +1138,7 @@ class cNMF:
 
     def k_selection_plot(self, close_fig=True):
         &#34;&#34;&#34;
-        Borrowed from Alexandrov Et Al. 2013 Deciphering Mutational Signatures 
+        Borrowed from Alexandrov Et Al. 2013 Deciphering Mutational Signatures
         publication in Cell Reports
         &#34;&#34;&#34;
         run_params = load_df_from_npz(self.paths[&#34;nmf_replicate_parameters&#34;])
@@ -1175,7 +1179,7 @@ class cNMF:
 
 def pick_k(k_selection_stats_path):
     k_sel_stats = load_df_from_npz(k_selection_stats_path)
-    return int(k_sel_stats.loc[k_sel_stats.stability.idxmax, &#34;k&#34;])
+    return int(k_sel_stats.loc[k_sel_stats.stability.idxmax(), &#34;k&#34;])
 
 
 def prepare(args):
@@ -1334,7 +1338,9 @@ def consensus(args):
     for k in ks:
         merged_spectra = load_df_from_npz(cnmf_obj.paths[&#34;merged_spectra&#34;] % k)
         cnmf_obj.consensus(
-            k, argdict[&#34;local_density_threshold&#34;], argdict[&#34;local_neighborhood_size&#34;],
+            k,
+            argdict[&#34;local_density_threshold&#34;],
+            argdict[&#34;local_neighborhood_size&#34;],
         )
         tpm = sc.read(cnmf_obj.paths[&#34;tpm&#34;])
         tpm.X = tpm.layers[&#34;raw_counts&#34;].copy()
@@ -1352,7 +1358,8 @@ def consensus(args):
                 cnmf_obj.name,
                 cnmf_obj.name
                 + &#34;_k{}_dt{}.h5ad&#34;.format(
-                    str(k), str(argdict[&#34;local_density_threshold&#34;]).replace(&#34;.&#34;, &#34;_&#34;),
+                    str(k),
+                    str(argdict[&#34;local_density_threshold&#34;]).replace(&#34;.&#34;, &#34;_&#34;),
                 ),
             ),
             compression=&#34;gzip&#34;,
@@ -1393,12 +1400,16 @@ def main():
 
     parser = argparse.ArgumentParser(prog=&#34;cnmf&#34;)
     parser.add_argument(
-        &#34;-V&#34;, &#34;--version&#34;, action=&#34;version&#34;, version=get_versions()[&#34;version&#34;],
+        &#34;-V&#34;,
+        &#34;--version&#34;,
+        action=&#34;version&#34;,
+        version=get_versions()[&#34;version&#34;],
     )
     subparsers = parser.add_subparsers()
 
     prepare_parser = subparsers.add_parser(
-        &#34;prepare&#34;, help=&#34;Prep scRNA-seq data for cNMF analysis.&#34;,
+        &#34;prepare&#34;,
+        help=&#34;Prep scRNA-seq data for cNMF analysis.&#34;,
     )
     prepare_parser.add_argument(
         &#34;counts&#34;,
@@ -1495,7 +1506,8 @@ def main():
     prepare_parser.set_defaults(func=prepare)
 
     factorize_parser = subparsers.add_parser(
-        &#34;factorize&#34;, help=&#34;Run NMF iteratively to generate factors for consensus.&#34;,
+        &#34;factorize&#34;,
+        help=&#34;Run NMF iteratively to generate factors for consensus.&#34;,
     )
     factorize_parser.add_argument(
         &#34;--name&#34;,
@@ -1555,7 +1567,8 @@ def main():
     combine_parser.set_defaults(func=combine)
 
     consensus_parser = subparsers.add_parser(
-        &#34;consensus&#34;, help=&#34;Calculate consensus factors from NMF iterations.&#34;,
+        &#34;consensus&#34;,
+        help=&#34;Calculate consensus factors from NMF iterations.&#34;,
     )
     consensus_parser.add_argument(
         &#34;--name&#34;,
@@ -1698,8 +1711,8 @@ output plot of gene loadings for each GEP usage.</p>
     &#34;&#34;&#34;
     Load results of cNMF
 
-    Given adata object and corresponding cNMF output (cnmf_dir, name, k, dt to 
-    identify), read in relevant results and save to adata object inplace, and 
+    Given adata object and corresponding cNMF output (cnmf_dir, name, k, dt to
+    identify), read in relevant results and save to adata object inplace, and
     output plot of gene loadings for each GEP usage.
 
     Parameters
@@ -1726,10 +1739,10 @@ output plot of gene loadings for each GEP usage.</p>
     -------
 
     adata : AnnData.AnnData
-        `adata` is edited in place to include overdispersed genes 
-        (`adata.var[&#34;cnmf_overdispersed&#34;]`), usages (`adata.obs[&#34;usage_#&#34;]`, 
-        `adata.obsm[&#34;cnmf_usages&#34;]`), gene spectra scores 
-        (`adata.varm[&#34;cnmf_spectra&#34;]`), and list of top genes by spectra score 
+        `adata` is edited in place to include overdispersed genes
+        (`adata.var[&#34;cnmf_overdispersed&#34;]`), usages (`adata.obs[&#34;usage_#&#34;]`,
+        `adata.obsm[&#34;cnmf_usages&#34;]`), gene spectra scores
+        (`adata.varm[&#34;cnmf_spectra&#34;]`), and list of top genes by spectra score
         (`adata.uns[&#34;cnmf_markers&#34;]`).
     &#34;&#34;&#34;
     # read in cell usages
@@ -1809,7 +1822,7 @@ loadings</dd>
     &#34;&#34;&#34;
     Read cNMF spectra into AnnData object
 
-    Reads in gene spectra score output from cNMF and saves top gene loadings for 
+    Reads in gene spectra score output from cNMF and saves top gene loadings for
     each usage as dataframe in adata.uns
 
     Parameters
@@ -1818,7 +1831,7 @@ loadings</dd>
     adata : AnnData.AnnData
         AnnData object
     spectra_score_file : str
-        `&lt;name&gt;.gene_spectra_score.&lt;k&gt;.&lt;dt&gt;.txt` file from cNMF containing gene 
+        `&lt;name&gt;.gene_spectra_score.&lt;k&gt;.&lt;dt&gt;.txt` file from cNMF containing gene
         loadings
     n_genes : int, optional (default=30)
         number of top genes to list for each usage (rows of df)
@@ -1829,8 +1842,8 @@ loadings</dd>
     -------
 
     adata : AnnData.AnnData
-        adata is edited in place to include gene spectra scores 
-        (`adata.varm[&#34;cnmf_spectra&#34;]`) and list of top genes by spectra score 
+        adata is edited in place to include gene spectra scores
+        (`adata.varm[&#34;cnmf_spectra&#34;]`) and list of top genes by spectra score
         (`adata.uns[&#34;cnmf_markers&#34;]`)
     &#34;&#34;&#34;
     # load Z-scored GEPs which reflect gene enrichment, save to adata.varm
@@ -1926,7 +1939,9 @@ loadings</dd>
     for k in ks:
         merged_spectra = load_df_from_npz(cnmf_obj.paths[&#34;merged_spectra&#34;] % k)
         cnmf_obj.consensus(
-            k, argdict[&#34;local_density_threshold&#34;], argdict[&#34;local_neighborhood_size&#34;],
+            k,
+            argdict[&#34;local_density_threshold&#34;],
+            argdict[&#34;local_neighborhood_size&#34;],
         )
         tpm = sc.read(cnmf_obj.paths[&#34;tpm&#34;])
         tpm.X = tpm.layers[&#34;raw_counts&#34;].copy()
@@ -1944,7 +1959,8 @@ loadings</dd>
                 cnmf_obj.name,
                 cnmf_obj.name
                 + &#34;_k{}_dt{}.h5ad&#34;.format(
-                    str(k), str(argdict[&#34;local_density_threshold&#34;]).replace(&#34;.&#34;, &#34;_&#34;),
+                    str(k),
+                    str(argdict[&#34;local_density_threshold&#34;]).replace(&#34;.&#34;, &#34;_&#34;),
                 ),
             ),
             compression=&#34;gzip&#34;,
@@ -2156,11 +2172,11 @@ loadings</dd>
 
     else:
         if not expected_fano_threshold:
-            T = 1.0 + gene_counts_fano[winsor_box].std()
+            T = 1.0 + gene_expected_fano[winsor_box].std()
         else:
             T = expected_fano_threshold
 
-        high_var_genes_ind = (fano_ratio &gt; T) &amp; (gene_counts_mean &gt; minimal_mean)
+        high_var_genes_ind = (fano_ratio &gt; T) &amp; (gene_mean &gt; minimal_mean)
 
     gene_counts_stats = pd.DataFrame(
         {
@@ -2233,12 +2249,16 @@ loadings</dd>
 
     parser = argparse.ArgumentParser(prog=&#34;cnmf&#34;)
     parser.add_argument(
-        &#34;-V&#34;, &#34;--version&#34;, action=&#34;version&#34;, version=get_versions()[&#34;version&#34;],
+        &#34;-V&#34;,
+        &#34;--version&#34;,
+        action=&#34;version&#34;,
+        version=get_versions()[&#34;version&#34;],
     )
     subparsers = parser.add_subparsers()
 
     prepare_parser = subparsers.add_parser(
-        &#34;prepare&#34;, help=&#34;Prep scRNA-seq data for cNMF analysis.&#34;,
+        &#34;prepare&#34;,
+        help=&#34;Prep scRNA-seq data for cNMF analysis.&#34;,
     )
     prepare_parser.add_argument(
         &#34;counts&#34;,
@@ -2335,7 +2355,8 @@ loadings</dd>
     prepare_parser.set_defaults(func=prepare)
 
     factorize_parser = subparsers.add_parser(
-        &#34;factorize&#34;, help=&#34;Run NMF iteratively to generate factors for consensus.&#34;,
+        &#34;factorize&#34;,
+        help=&#34;Run NMF iteratively to generate factors for consensus.&#34;,
     )
     factorize_parser.add_argument(
         &#34;--name&#34;,
@@ -2395,7 +2416,8 @@ loadings</dd>
     combine_parser.set_defaults(func=combine)
 
     consensus_parser = subparsers.add_parser(
-        &#34;consensus&#34;, help=&#34;Calculate consensus factors from NMF iterations.&#34;,
+        &#34;consensus&#34;,
+        help=&#34;Calculate consensus factors from NMF iterations.&#34;,
     )
     consensus_parser.add_argument(
         &#34;--name&#34;,
@@ -2478,7 +2500,7 @@ loadings</dd>
 </summary>
 <pre><code class="python">def pick_k(k_selection_stats_path):
     k_sel_stats = load_df_from_npz(k_selection_stats_path)
-    return int(k_sel_stats.loc[k_sel_stats.stability.idxmax, &#34;k&#34;])</code></pre>
+    return int(k_sel_stats.loc[k_sel_stats.stability.idxmax(), &#34;k&#34;])</code></pre>
 </details>
 </dd>
 <dt id="cNMF.cnmf.prepare"><code class="name flex">
@@ -2727,6 +2749,7 @@ If set to None, will be automatically generated from date (and random string).</
 
     Containerizes the cNMF inputs and outputs to allow for easy pipelining
     &#34;&#34;&#34;
+
     def __init__(self, output_dir=&#34;.&#34;, name=None):
         &#34;&#34;&#34;
         Parameters
@@ -2879,29 +2902,29 @@ If set to None, will be automatically generated from date (and random string).</
         ----------
 
         counts : anndata.AnnData
-            Scanpy AnnData object (cells x genes) containing raw counts. Filtered such 
+            Scanpy AnnData object (cells x genes) containing raw counts. Filtered such
             that no genes or cells with 0 counts
 
         tpm : anndata.AnnData
-            Scanpy AnnData object (cells x genes) containing tpm normalized data 
+            Scanpy AnnData object (cells x genes) containing tpm normalized data
             matching counts
 
         high_variance_genes_filter : np.array, optional (default=None)
             A pre-specified list of genes considered to be high-variance.
             Only these genes will be used during factorization of the counts matrix.
             Must match the .var index of counts and tpm.
-            If set to None, high-variance genes will be automatically computed, using 
+            If set to None, high-variance genes will be automatically computed, using
             the parameters below.
 
         num_highvar_genes : int, optional (default=None)
-            Instead of providing an array of high-variance genes, identify this many 
+            Instead of providing an array of high-variance genes, identify this many
             most overdispersed genes for filtering
 
         Returns
         -------
 
         normcounts : anndata.AnnData, shape (cells, num_highvar_genes)
-            A counts matrix containing only the high variance genes and with columns 
+            A counts matrix containing only the high variance genes and with columns
             (genes) normalized to unit variance
 
         &#34;&#34;&#34;
@@ -2968,11 +2991,11 @@ If set to None, will be automatically generated from date (and random string).</
         ----------
         ks : integer, or list-like.
             Number of topics (components) for factorization.
-            Several values can be specified at the same time, which will be run 
+            Several values can be specified at the same time, which will be run
             independently.
 
         n_iter : integer, optional (defailt=100)
-            Number of iterations for factorization. If several `k` are specified, 
+            Number of iterations for factorization. If several `k` are specified,
             this many iterations will be run for each value of `k`.
 
         random_state_seed : int or None, optional (default=None)
@@ -2998,13 +3021,13 @@ If set to None, will be automatically generated from date (and random string).</
         )
 
         _nmf_kwargs = dict(
-            alpha=0.0,
+            alpha_W=0.0,
             l1_ratio=0.0,
             beta_loss=beta_loss,
             solver=&#34;mu&#34;,
             tol=1e-4,
             max_iter=400,
-            regularization=None,
+            alpha_H=None,
             init=&#34;random&#34;,
         )
 
@@ -3035,25 +3058,27 @@ If set to None, will be automatically generated from date (and random string).</
         return (spectra, usages)
 
     def run_nmf(
-        self, worker_i=1, total_workers=1,
+        self,
+        worker_i=1,
+        total_workers=1,
     ):
         &#34;&#34;&#34;
         Iteratively runs NMF with prespecified parameters
 
-        Use the `worker_i` and `total_workers` parameters for parallelization. 
-        Generic kwargs for NMF are loaded from `self.paths[&#39;nmf_run_parameters&#39;]`, 
+        Use the `worker_i` and `total_workers` parameters for parallelization.
+        Generic kwargs for NMF are loaded from `self.paths[&#39;nmf_run_parameters&#39;]`,
         defaults below::
 
             `non_negative_factorization` default arguments:
-                alpha=0.0
+                alpha_W=0.0
                 l1_ratio=0.0
                 beta_loss=&#39;kullback-leibler&#39;
                 solver=&#39;mu&#39;
                 tol=1e-4,
                 max_iter=200
-                regularization=None
+                alpha_H=None
                 init=&#39;random&#39;
-                random_state, n_components are both set by the prespecified 
+                random_state, n_components are both set by the prespecified
                 self.paths[&#39;nmf_replicate_parameters&#39;].
 
 
@@ -3275,7 +3300,11 @@ If set to None, will be automatically generated from date (and random string).</
         # Convert spectra to TPM units, and obtain results for all genes by running
         # last step of NMF with usages fixed and TPM as the input matrix
         norm_usages = rf_usages.div(rf_usages.sum(axis=1), axis=0)
-        refit_nmf_kwargs.update(dict(H=norm_usages.T.values,))
+        refit_nmf_kwargs.update(
+            dict(
+                H=norm_usages.T.values,
+            )
+        )
 
         # ensure dtypes match for factorization
         if norm_usages.values.dtype != tpm.X.dtype:
@@ -3437,7 +3466,7 @@ If set to None, will be automatically generated from date (and random string).</
 
     def k_selection_plot(self, close_fig=True):
         &#34;&#34;&#34;
-        Borrowed from Alexandrov Et Al. 2013 Deciphering Mutational Signatures 
+        Borrowed from Alexandrov Et Al. 2013 Deciphering Mutational Signatures
         publication in Cell Reports
         &#34;&#34;&#34;
         run_params = load_df_from_npz(self.paths[&#34;nmf_replicate_parameters&#34;])
@@ -3677,7 +3706,11 @@ If set to None, will be automatically generated from date (and random string).</
     # Convert spectra to TPM units, and obtain results for all genes by running
     # last step of NMF with usages fixed and TPM as the input matrix
     norm_usages = rf_usages.div(rf_usages.sum(axis=1), axis=0)
-    refit_nmf_kwargs.update(dict(H=norm_usages.T.values,))
+    refit_nmf_kwargs.update(
+        dict(
+            H=norm_usages.T.values,
+        )
+    )
 
     # ensure dtypes match for factorization
     if norm_usages.values.dtype != tpm.X.dtype:
@@ -3869,11 +3902,11 @@ this many iterations will be run for each value of <code>k</code>.</dd>
     ----------
     ks : integer, or list-like.
         Number of topics (components) for factorization.
-        Several values can be specified at the same time, which will be run 
+        Several values can be specified at the same time, which will be run
         independently.
 
     n_iter : integer, optional (defailt=100)
-        Number of iterations for factorization. If several `k` are specified, 
+        Number of iterations for factorization. If several `k` are specified,
         this many iterations will be run for each value of `k`.
 
     random_state_seed : int or None, optional (default=None)
@@ -3899,13 +3932,13 @@ this many iterations will be run for each value of <code>k</code>.</dd>
     )
 
     _nmf_kwargs = dict(
-        alpha=0.0,
+        alpha_W=0.0,
         l1_ratio=0.0,
         beta_loss=beta_loss,
         solver=&#34;mu&#34;,
         tol=1e-4,
         max_iter=400,
-        regularization=None,
+        alpha_H=None,
         init=&#34;random&#34;,
     )
 
@@ -3956,29 +3989,29 @@ most overdispersed genes for filtering</dd>
     ----------
 
     counts : anndata.AnnData
-        Scanpy AnnData object (cells x genes) containing raw counts. Filtered such 
+        Scanpy AnnData object (cells x genes) containing raw counts. Filtered such
         that no genes or cells with 0 counts
 
     tpm : anndata.AnnData
-        Scanpy AnnData object (cells x genes) containing tpm normalized data 
+        Scanpy AnnData object (cells x genes) containing tpm normalized data
         matching counts
 
     high_variance_genes_filter : np.array, optional (default=None)
         A pre-specified list of genes considered to be high-variance.
         Only these genes will be used during factorization of the counts matrix.
         Must match the .var index of counts and tpm.
-        If set to None, high-variance genes will be automatically computed, using 
+        If set to None, high-variance genes will be automatically computed, using
         the parameters below.
 
     num_highvar_genes : int, optional (default=None)
-        Instead of providing an array of high-variance genes, identify this many 
+        Instead of providing an array of high-variance genes, identify this many
         most overdispersed genes for filtering
 
     Returns
     -------
 
     normcounts : anndata.AnnData, shape (cells, num_highvar_genes)
-        A counts matrix containing only the high variance genes and with columns 
+        A counts matrix containing only the high variance genes and with columns
         (genes) normalized to unit variance
 
     &#34;&#34;&#34;
@@ -4044,7 +4077,7 @@ publication in Cell Reports</p></div>
 </summary>
 <pre><code class="python">def k_selection_plot(self, close_fig=True):
     &#34;&#34;&#34;
-    Borrowed from Alexandrov Et Al. 2013 Deciphering Mutational Signatures 
+    Borrowed from Alexandrov Et Al. 2013 Deciphering Mutational Signatures
     publication in Cell Reports
     &#34;&#34;&#34;
     run_params = load_df_from_npz(self.paths[&#34;nmf_replicate_parameters&#34;])
@@ -4092,15 +4125,15 @@ publication in Cell Reports</p></div>
 Generic kwargs for NMF are loaded from <code>self.paths['nmf_run_parameters']</code>,
 defaults below::</p>
 <pre><code>&lt;code&gt;non\_negative\_factorization&lt;/code&gt; default arguments:
-    alpha=0.0
+    alpha_W=0.0
     l1_ratio=0.0
     beta_loss='kullback-leibler'
     solver='mu'
     tol=1e-4,
     max_iter=200
-    regularization=None
+    alpha_H=None
     init='random'
-    random_state, n_components are both set by the prespecified 
+    random_state, n_components are both set by the prespecified
     self.paths['nmf_replicate_parameters'].
 </code></pre>
 <h2 id="parameters">Parameters</h2>
@@ -4117,25 +4150,27 @@ defaults below::</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def run_nmf(
-    self, worker_i=1, total_workers=1,
+    self,
+    worker_i=1,
+    total_workers=1,
 ):
     &#34;&#34;&#34;
     Iteratively runs NMF with prespecified parameters
 
-    Use the `worker_i` and `total_workers` parameters for parallelization. 
-    Generic kwargs for NMF are loaded from `self.paths[&#39;nmf_run_parameters&#39;]`, 
+    Use the `worker_i` and `total_workers` parameters for parallelization.
+    Generic kwargs for NMF are loaded from `self.paths[&#39;nmf_run_parameters&#39;]`,
     defaults below::
 
         `non_negative_factorization` default arguments:
-            alpha=0.0
+            alpha_W=0.0
             l1_ratio=0.0
             beta_loss=&#39;kullback-leibler&#39;
             solver=&#39;mu&#39;
             tol=1e-4,
             max_iter=200
-            regularization=None
+            alpha_H=None
             init=&#39;random&#39;
-            random_state, n_components are both set by the prespecified 
+            random_state, n_components are both set by the prespecified
             self.paths[&#39;nmf_replicate_parameters&#39;].
 
 
@@ -4270,7 +4305,7 @@ defaults below::</p>
 </nav>
 </main>
 <footer id="footer">
-<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
 </footer>
 </body>
 </html>
