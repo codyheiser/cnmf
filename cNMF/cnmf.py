@@ -670,7 +670,7 @@ class cNMF:
             solver="mu",
             tol=1e-4,
             max_iter=400,
-            alpha_H=None,
+            alpha_H="same",
             init="random",
         )
 
