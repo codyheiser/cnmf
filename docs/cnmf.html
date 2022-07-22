@@ -132,7 +132,7 @@ def var_sparse_matrix(X):
     mean = np.array(X.mean(axis=0)).reshape(-1)
     Xcopy = X.copy()
     Xcopy.data **= 2
-    var = np.array(Xcopy.mean(axis=0)).reshape(-1) - (mean ** 2)
+    var = np.array(Xcopy.mean(axis=0)).reshape(-1) - (mean**2)
     return var
 
 
@@ -144,7 +144,7 @@ def get_highvar_genes_sparse(
     E2 = expression.copy()
     E2.data **= 2
     gene2_mean = np.array(E2.mean(axis=0)).reshape(-1)
-    gene_var = pd.Series(gene2_mean - (gene_mean ** 2))
+    gene_var = pd.Series(gene2_mean - (gene_mean**2))
     del E2
     gene_mean = pd.Series(gene_mean)
     gene_fano = gene_var / gene_mean
@@ -164,7 +164,7 @@ def get_highvar_genes_sparse(
     fano_median = gene_fano[winsor_box].median()
     B = np.sqrt(fano_median)
 
-    gene_expected_fano = (A ** 2) * gene_mean + (B ** 2)
+    gene_expected_fano = (A**2) * gene_mean + (B**2)
     fano_ratio = gene_fano / gene_expected_fano
 
     # Identify high var genes
@@ -223,7 +223,7 @@ def get_highvar_genes(
     fano_median = gene_counts_fano[winsor_box].median()
     B = np.sqrt(fano_median)
 
-    gene_expected_fano = (A ** 2) * gene_counts_mean + (B ** 2)
+    gene_expected_fano = (A**2) * gene_counts_mean + (B**2)
 
     fano_ratio = gene_counts_fano / gene_expected_fano
 
@@ -285,6 +285,19 @@ def subset_adata(adata, subset):
     adata = adata[adata.obs[&#34;adata_subset_combined&#34;] == 1, :].copy()
     adata.obs.drop(columns=&#34;adata_subset_combined&#34;, inplace=True)
     print(&#34; - now {} cells and {} genes&#34;.format(adata.n_obs, adata.n_vars))
+    return adata
+
+
+def replace_var_names_adata(adata, var_col, verbose=True):
+    &#34;&#34;&#34;
+    Replaces `adata.var_names` with values from a column of `adata.var`
+    &#34;&#34;&#34;
+    if verbose:
+        print(&#34;Replacing AnnData variable names with adata.var[{}]&#34;.format(var_col))
+    adata.var_names = adata.var[var_col].astype(str).values
+    adata.var_names_make_unique()  # uniquify gene symbols
+    if verbose:
+        print(&#34;New variable names:\n {}&#34;.format(adata.var_names))
     return adata
 
 
@@ -572,35 +585,28 @@ class cNMF:
         &#34;&#34;&#34;
         Parameters
         ----------
-
         counts : anndata.AnnData
             Scanpy AnnData object (cells x genes) containing raw counts. Filtered such
             that no genes or cells with 0 counts
-
         tpm : anndata.AnnData
             Scanpy AnnData object (cells x genes) containing tpm normalized data
             matching counts
-
         high_variance_genes_filter : np.array, optional (default=None)
             A pre-specified list of genes considered to be high-variance.
             Only these genes will be used during factorization of the counts matrix.
             Must match the .var index of counts and tpm.
-            If set to None, high-variance genes will be automatically computed, using
+            If set to `None`, high-variance genes will be automatically computed, using
             the parameters below.
-
         num_highvar_genes : int, optional (default=None)
             Instead of providing an array of high-variance genes, identify this many
             most overdispersed genes for filtering
 
         Returns
         -------
-
         normcounts : anndata.AnnData, shape (cells, num_highvar_genes)
             A counts matrix containing only the high variance genes and with columns
             (genes) normalized to unit variance
-
         &#34;&#34;&#34;
-
         if high_variance_genes_filter is None:
             ## Get list of high-var genes if one wasn&#39;t provided
             if sp.issparse(tpm.X):
@@ -683,7 +689,7 @@ class cNMF:
         n_runs = len(ks) * n_iter
 
         np.random.seed(seed=random_state_seed)
-        nmf_seeds = np.random.randint(low=1, high=(2 ** 32) - 1, size=n_runs)
+        nmf_seeds = np.random.randint(low=1, high=(2**32) - 1, size=n_runs)
 
         replicate_params = []
         for i, (k, r) in enumerate(itertools.product(k_list, range(n_iter))):
@@ -699,7 +705,7 @@ class cNMF:
             solver=&#34;mu&#34;,
             tol=1e-4,
             max_iter=400,
-            alpha_H=None,
+            alpha_H=&#34;same&#34;,
             init=&#34;random&#34;,
         )
 
@@ -721,7 +727,6 @@ class cNMF:
         ----------
         X : pandas.DataFrame,
             Normalized counts dataFrame to be factorized.
-
         nmf_kwargs : dict,
             Arguments to be passed to `non_negative_factorization`
         &#34;&#34;&#34;
@@ -753,13 +758,11 @@ class cNMF:
                 random_state, n_components are both set by the prespecified
                 self.paths[&#39;nmf_replicate_parameters&#39;].
 
-
         Parameters
         ----------
         norm_counts : pandas.DataFrame,
             Normalized counts dataFrame to be factorized.
             (Output of `normalize_counts`)
-
         run_params : pandas.DataFrame,
             Parameters for NMF iterations.
             (Output of `prepare_nmf_iter_params`)
@@ -842,7 +845,7 @@ class cNMF:
         n_neighbors = int(local_neighborhood_size * merged_spectra.shape[0] / k)
 
         # Rescale topics such to length of 1.
-        l2_spectra = (merged_spectra.T / np.sqrt((merged_spectra ** 2).sum(axis=1))).T
+        l2_spectra = (merged_spectra.T / np.sqrt((merged_spectra**2).sum(axis=1))).T
 
         if not skip_density_and_return_after_stats:
             # Compute the local density matrix (if not previously cached)
@@ -1256,6 +1259,17 @@ def prepare(args):
                 n_null, tpm.shape
             )
         )
+
+    # replace var_names with desired .var column (to switch symbol for Ensembl ID)
+    if args.gene_symbol_col is not None:
+        input_counts = replace_var_names_adata(
+            input_counts, var_col=args.gene_symbol_col
+        )
+
+    # replace var_names with desired .var column (to switch symbol for Ensembl ID)
+    if args.gene_symbol_col is not None:
+        tpm = replace_var_names_adata(tpm, var_col=args.gene_symbol_col, verbose=False)
+
     tpm.write(cnmf_obj.paths[&#34;tpm&#34;], compression=&#34;gzip&#34;)
 
     if sp.issparse(tpm.X):
@@ -1464,6 +1478,12 @@ def main():
         type=str,
         default=None,
         help=&#34;Key from .layers to use. Default &#39;.X&#39;.&#34;,
+    )
+    prepare_parser.add_argument(
+        &#34;--gene-symbol-col&#34;,
+        type=str,
+        default=None,
+        help=&#34;Replace `adata.var_names` with values from `adata.var[gene_symbol_col]` (i.e. to switch symbol for Ensembl ID)&#34;,
     )
     prepare_parser.add_argument(
         &#34;--seed&#34;,
@@ -2087,7 +2107,7 @@ loadings</dd>
     fano_median = gene_counts_fano[winsor_box].median()
     B = np.sqrt(fano_median)
 
-    gene_expected_fano = (A ** 2) * gene_counts_mean + (B ** 2)
+    gene_expected_fano = (A**2) * gene_counts_mean + (B**2)
 
     fano_ratio = gene_counts_fano / gene_expected_fano
 
@@ -2141,7 +2161,7 @@ loadings</dd>
     E2 = expression.copy()
     E2.data **= 2
     gene2_mean = np.array(E2.mean(axis=0)).reshape(-1)
-    gene_var = pd.Series(gene2_mean - (gene_mean ** 2))
+    gene_var = pd.Series(gene2_mean - (gene_mean**2))
     del E2
     gene_mean = pd.Series(gene_mean)
     gene_fano = gene_var / gene_mean
@@ -2161,7 +2181,7 @@ loadings</dd>
     fano_median = gene_fano[winsor_box].median()
     B = np.sqrt(fano_median)
 
-    gene_expected_fano = (A ** 2) * gene_mean + (B ** 2)
+    gene_expected_fano = (A**2) * gene_mean + (B**2)
     fano_ratio = gene_fano / gene_expected_fano
 
     # Identify high var genes
@@ -2313,6 +2333,12 @@ loadings</dd>
         type=str,
         default=None,
         help=&#34;Key from .layers to use. Default &#39;.X&#39;.&#34;,
+    )
+    prepare_parser.add_argument(
+        &#34;--gene-symbol-col&#34;,
+        type=str,
+        default=None,
+        help=&#34;Replace `adata.var_names` with values from `adata.var[gene_symbol_col]` (i.e. to switch symbol for Ensembl ID)&#34;,
     )
     prepare_parser.add_argument(
         &#34;--seed&#34;,
@@ -2586,6 +2612,17 @@ loadings</dd>
                 n_null, tpm.shape
             )
         )
+
+    # replace var_names with desired .var column (to switch symbol for Ensembl ID)
+    if args.gene_symbol_col is not None:
+        input_counts = replace_var_names_adata(
+            input_counts, var_col=args.gene_symbol_col
+        )
+
+    # replace var_names with desired .var column (to switch symbol for Ensembl ID)
+    if args.gene_symbol_col is not None:
+        tpm = replace_var_names_adata(tpm, var_col=args.gene_symbol_col, verbose=False)
+
     tpm.write(cnmf_obj.paths[&#34;tpm&#34;], compression=&#34;gzip&#34;)
 
     if sp.issparse(tpm.X):
@@ -2619,6 +2656,28 @@ loadings</dd>
         beta_loss=argdict[&#34;beta_loss&#34;],
     )
     cnmf_obj.save_nmf_iter_params(replicate_params, run_params)</code></pre>
+</details>
+</dd>
+<dt id="cNMF.cnmf.replace_var_names_adata"><code class="name flex">
+<span>def <span class="ident">replace_var_names_adata</span></span>(<span>adata, var_col, verbose=True)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Replaces <code>adata.var_names</code> with values from a column of <code>adata.var</code></p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def replace_var_names_adata(adata, var_col, verbose=True):
+    &#34;&#34;&#34;
+    Replaces `adata.var_names` with values from a column of `adata.var`
+    &#34;&#34;&#34;
+    if verbose:
+        print(&#34;Replacing AnnData variable names with adata.var[{}]&#34;.format(var_col))
+    adata.var_names = adata.var[var_col].astype(str).values
+    adata.var_names_make_unique()  # uniquify gene symbols
+    if verbose:
+        print(&#34;New variable names:\n {}&#34;.format(adata.var_names))
+    return adata</code></pre>
 </details>
 </dd>
 <dt id="cNMF.cnmf.save_df_to_npz"><code class="name flex">
@@ -2700,7 +2759,7 @@ loadings</dd>
     mean = np.array(X.mean(axis=0)).reshape(-1)
     Xcopy = X.copy()
     Xcopy.data **= 2
-    var = np.array(Xcopy.mean(axis=0)).reshape(-1) - (mean ** 2)
+    var = np.array(Xcopy.mean(axis=0)).reshape(-1) - (mean**2)
     return var</code></pre>
 </details>
 </dd>
@@ -2900,35 +2959,28 @@ If set to None, will be automatically generated from date (and random string).</
         &#34;&#34;&#34;
         Parameters
         ----------
-
         counts : anndata.AnnData
             Scanpy AnnData object (cells x genes) containing raw counts. Filtered such
             that no genes or cells with 0 counts
-
         tpm : anndata.AnnData
             Scanpy AnnData object (cells x genes) containing tpm normalized data
             matching counts
-
         high_variance_genes_filter : np.array, optional (default=None)
             A pre-specified list of genes considered to be high-variance.
             Only these genes will be used during factorization of the counts matrix.
             Must match the .var index of counts and tpm.
-            If set to None, high-variance genes will be automatically computed, using
+            If set to `None`, high-variance genes will be automatically computed, using
             the parameters below.
-
         num_highvar_genes : int, optional (default=None)
             Instead of providing an array of high-variance genes, identify this many
             most overdispersed genes for filtering
 
         Returns
         -------
-
         normcounts : anndata.AnnData, shape (cells, num_highvar_genes)
             A counts matrix containing only the high variance genes and with columns
             (genes) normalized to unit variance
-
         &#34;&#34;&#34;
-
         if high_variance_genes_filter is None:
             ## Get list of high-var genes if one wasn&#39;t provided
             if sp.issparse(tpm.X):
@@ -3011,7 +3063,7 @@ If set to None, will be automatically generated from date (and random string).</
         n_runs = len(ks) * n_iter
 
         np.random.seed(seed=random_state_seed)
-        nmf_seeds = np.random.randint(low=1, high=(2 ** 32) - 1, size=n_runs)
+        nmf_seeds = np.random.randint(low=1, high=(2**32) - 1, size=n_runs)
 
         replicate_params = []
         for i, (k, r) in enumerate(itertools.product(k_list, range(n_iter))):
@@ -3027,7 +3079,7 @@ If set to None, will be automatically generated from date (and random string).</
             solver=&#34;mu&#34;,
             tol=1e-4,
             max_iter=400,
-            alpha_H=None,
+            alpha_H=&#34;same&#34;,
             init=&#34;random&#34;,
         )
 
@@ -3049,7 +3101,6 @@ If set to None, will be automatically generated from date (and random string).</
         ----------
         X : pandas.DataFrame,
             Normalized counts dataFrame to be factorized.
-
         nmf_kwargs : dict,
             Arguments to be passed to `non_negative_factorization`
         &#34;&#34;&#34;
@@ -3081,13 +3132,11 @@ If set to None, will be automatically generated from date (and random string).</
                 random_state, n_components are both set by the prespecified
                 self.paths[&#39;nmf_replicate_parameters&#39;].
 
-
         Parameters
         ----------
         norm_counts : pandas.DataFrame,
             Normalized counts dataFrame to be factorized.
             (Output of `normalize_counts`)
-
         run_params : pandas.DataFrame,
             Parameters for NMF iterations.
             (Output of `prepare_nmf_iter_params`)
@@ -3170,7 +3219,7 @@ If set to None, will be automatically generated from date (and random string).</
         n_neighbors = int(local_neighborhood_size * merged_spectra.shape[0] / k)
 
         # Rescale topics such to length of 1.
-        l2_spectra = (merged_spectra.T / np.sqrt((merged_spectra ** 2).sum(axis=1))).T
+        l2_spectra = (merged_spectra.T / np.sqrt((merged_spectra**2).sum(axis=1))).T
 
         if not skip_density_and_return_after_stats:
             # Compute the local density matrix (if not previously cached)
@@ -3576,7 +3625,7 @@ If set to None, will be automatically generated from date (and random string).</
     n_neighbors = int(local_neighborhood_size * merged_spectra.shape[0] / k)
 
     # Rescale topics such to length of 1.
-    l2_spectra = (merged_spectra.T / np.sqrt((merged_spectra ** 2).sum(axis=1))).T
+    l2_spectra = (merged_spectra.T / np.sqrt((merged_spectra**2).sum(axis=1))).T
 
     if not skip_density_and_return_after_stats:
         # Compute the local density matrix (if not previously cached)
@@ -3922,7 +3971,7 @@ this many iterations will be run for each value of <code>k</code>.</dd>
     n_runs = len(ks) * n_iter
 
     np.random.seed(seed=random_state_seed)
-    nmf_seeds = np.random.randint(low=1, high=(2 ** 32) - 1, size=n_runs)
+    nmf_seeds = np.random.randint(low=1, high=(2**32) - 1, size=n_runs)
 
     replicate_params = []
     for i, (k, r) in enumerate(itertools.product(k_list, range(n_iter))):
@@ -3938,7 +3987,7 @@ this many iterations will be run for each value of <code>k</code>.</dd>
         solver=&#34;mu&#34;,
         tol=1e-4,
         max_iter=400,
-        alpha_H=None,
+        alpha_H=&#34;same&#34;,
         init=&#34;random&#34;,
     )
 
@@ -3965,7 +4014,7 @@ matching counts</dd>
 <dd>A pre-specified list of genes considered to be high-variance.
 Only these genes will be used during factorization of the counts matrix.
 Must match the .var index of counts and tpm.
-If set to None, high-variance genes will be automatically computed, using
+If set to <code>None</code>, high-variance genes will be automatically computed, using
 the parameters below.</dd>
 <dt><strong><code>num_highvar_genes</code></strong> :&ensp;<code>int</code>, optional <code>(default=None)</code></dt>
 <dd>Instead of providing an array of high-variance genes, identify this many
@@ -3987,35 +4036,28 @@ most overdispersed genes for filtering</dd>
     &#34;&#34;&#34;
     Parameters
     ----------
-
     counts : anndata.AnnData
         Scanpy AnnData object (cells x genes) containing raw counts. Filtered such
         that no genes or cells with 0 counts
-
     tpm : anndata.AnnData
         Scanpy AnnData object (cells x genes) containing tpm normalized data
         matching counts
-
     high_variance_genes_filter : np.array, optional (default=None)
         A pre-specified list of genes considered to be high-variance.
         Only these genes will be used during factorization of the counts matrix.
         Must match the .var index of counts and tpm.
-        If set to None, high-variance genes will be automatically computed, using
+        If set to `None`, high-variance genes will be automatically computed, using
         the parameters below.
-
     num_highvar_genes : int, optional (default=None)
         Instead of providing an array of high-variance genes, identify this many
         most overdispersed genes for filtering
 
     Returns
     -------
-
     normcounts : anndata.AnnData, shape (cells, num_highvar_genes)
         A counts matrix containing only the high variance genes and with columns
         (genes) normalized to unit variance
-
     &#34;&#34;&#34;
-
     if high_variance_genes_filter is None:
         ## Get list of high-var genes if one wasn&#39;t provided
         if sp.issparse(tpm.X):
@@ -4173,13 +4215,11 @@ defaults below::</p>
             random_state, n_components are both set by the prespecified
             self.paths[&#39;nmf_replicate_parameters&#39;].
 
-
     Parameters
     ----------
     norm_counts : pandas.DataFrame,
         Normalized counts dataFrame to be factorized.
         (Output of `normalize_counts`)
-
     run_params : pandas.DataFrame,
         Parameters for NMF iterations.
         (Output of `prepare_nmf_iter_params`)
@@ -4277,6 +4317,7 @@ defaults below::</p>
 <li><code><a title="cNMF.cnmf.main" href="#cNMF.cnmf.main">main</a></code></li>
 <li><code><a title="cNMF.cnmf.pick_k" href="#cNMF.cnmf.pick_k">pick_k</a></code></li>
 <li><code><a title="cNMF.cnmf.prepare" href="#cNMF.cnmf.prepare">prepare</a></code></li>
+<li><code><a title="cNMF.cnmf.replace_var_names_adata" href="#cNMF.cnmf.replace_var_names_adata">replace_var_names_adata</a></code></li>
 <li><code><a title="cNMF.cnmf.save_df_to_npz" href="#cNMF.cnmf.save_df_to_npz">save_df_to_npz</a></code></li>
 <li><code><a title="cNMF.cnmf.save_df_to_text" href="#cNMF.cnmf.save_df_to_text">save_df_to_text</a></code></li>
 <li><code><a title="cNMF.cnmf.subset_adata" href="#cNMF.cnmf.subset_adata">subset_adata</a></code></li>

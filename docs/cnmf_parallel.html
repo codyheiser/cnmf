@@ -179,6 +179,12 @@ def main():
         help=&#34;Key from .layers to use. Default &#39;.X&#39;.&#34;,
     )
     parser.add_argument(
+        &#34;--gene-symbol-col&#34;,
+        type=str,
+        default=None,
+        help=&#34;Replace `adata.var_names` with values from `adata.var[gene_symbol_col]` (i.e. to switch symbol for Ensembl ID)&#34;,
+    )
+    parser.add_argument(
         &#34;--seed&#34;,
         type=int,
         help=&#34;Seed for pseudorandom number generation. Default 18.&#34;,
@@ -324,6 +330,12 @@ def main():
         type=str,
         default=None,
         help=&#34;Key from .layers to use. Default &#39;.X&#39;.&#34;,
+    )
+    parser.add_argument(
+        &#34;--gene-symbol-col&#34;,
+        type=str,
+        default=None,
+        help=&#34;Replace `adata.var_names` with values from `adata.var[gene_symbol_col]` (i.e. to switch symbol for Ensembl ID)&#34;,
     )
     parser.add_argument(
         &#34;--seed&#34;,

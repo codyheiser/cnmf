@@ -148,6 +148,12 @@ def main():
         help="Key from .layers to use. Default '.X'.",
     )
     parser.add_argument(
+        "--gene-symbol-col",
+        type=str,
+        default=None,
+        help="Replace `adata.var_names` with values from `adata.var[gene_symbol_col]` (i.e. to switch symbol for Ensembl ID)",
+    )
+    parser.add_argument(
         "--seed",
         type=int,
         help="Seed for pseudorandom number generation. Default 18.",

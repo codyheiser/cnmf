@@ -420,6 +420,17 @@ output plot of gene loadings for each GEP usage.</p>
                 n_null, tpm.shape
             )
         )
+
+    # replace var_names with desired .var column (to switch symbol for Ensembl ID)
+    if args.gene_symbol_col is not None:
+        input_counts = replace_var_names_adata(
+            input_counts, var_col=args.gene_symbol_col
+        )
+
+    # replace var_names with desired .var column (to switch symbol for Ensembl ID)
+    if args.gene_symbol_col is not None:
+        tpm = replace_var_names_adata(tpm, var_col=args.gene_symbol_col, verbose=False)
+
     tpm.write(cnmf_obj.paths[&#34;tpm&#34;], compression=&#34;gzip&#34;)
 
     if sp.issparse(tpm.X):
@@ -636,35 +647,28 @@ If set to None, will be automatically generated from date (and random string).</
         &#34;&#34;&#34;
         Parameters
         ----------
-
         counts : anndata.AnnData
             Scanpy AnnData object (cells x genes) containing raw counts. Filtered such
             that no genes or cells with 0 counts
-
         tpm : anndata.AnnData
             Scanpy AnnData object (cells x genes) containing tpm normalized data
             matching counts
-
         high_variance_genes_filter : np.array, optional (default=None)
             A pre-specified list of genes considered to be high-variance.
             Only these genes will be used during factorization of the counts matrix.
             Must match the .var index of counts and tpm.
-            If set to None, high-variance genes will be automatically computed, using
+            If set to `None`, high-variance genes will be automatically computed, using
             the parameters below.
-
         num_highvar_genes : int, optional (default=None)
             Instead of providing an array of high-variance genes, identify this many
             most overdispersed genes for filtering
 
         Returns
         -------
-
         normcounts : anndata.AnnData, shape (cells, num_highvar_genes)
             A counts matrix containing only the high variance genes and with columns
             (genes) normalized to unit variance
-
         &#34;&#34;&#34;
-
         if high_variance_genes_filter is None:
             ## Get list of high-var genes if one wasn&#39;t provided
             if sp.issparse(tpm.X):
@@ -747,7 +751,7 @@ If set to None, will be automatically generated from date (and random string).</
         n_runs = len(ks) * n_iter
 
         np.random.seed(seed=random_state_seed)
-        nmf_seeds = np.random.randint(low=1, high=(2 ** 32) - 1, size=n_runs)
+        nmf_seeds = np.random.randint(low=1, high=(2**32) - 1, size=n_runs)
 
         replicate_params = []
         for i, (k, r) in enumerate(itertools.product(k_list, range(n_iter))):
@@ -763,7 +767,7 @@ If set to None, will be automatically generated from date (and random string).</
             solver=&#34;mu&#34;,
             tol=1e-4,
             max_iter=400,
-            alpha_H=None,
+            alpha_H=&#34;same&#34;,
             init=&#34;random&#34;,
         )
 
@@ -785,7 +789,6 @@ If set to None, will be automatically generated from date (and random string).</
         ----------
         X : pandas.DataFrame,
             Normalized counts dataFrame to be factorized.
-
         nmf_kwargs : dict,
             Arguments to be passed to `non_negative_factorization`
         &#34;&#34;&#34;
@@ -817,13 +820,11 @@ If set to None, will be automatically generated from date (and random string).</
                 random_state, n_components are both set by the prespecified
                 self.paths[&#39;nmf_replicate_parameters&#39;].
 
-
         Parameters
         ----------
         norm_counts : pandas.DataFrame,
             Normalized counts dataFrame to be factorized.
             (Output of `normalize_counts`)
-
         run_params : pandas.DataFrame,
             Parameters for NMF iterations.
             (Output of `prepare_nmf_iter_params`)
@@ -906,7 +907,7 @@ If set to None, will be automatically generated from date (and random string).</
         n_neighbors = int(local_neighborhood_size * merged_spectra.shape[0] / k)
 
         # Rescale topics such to length of 1.
-        l2_spectra = (merged_spectra.T / np.sqrt((merged_spectra ** 2).sum(axis=1))).T
+        l2_spectra = (merged_spectra.T / np.sqrt((merged_spectra**2).sum(axis=1))).T
 
         if not skip_density_and_return_after_stats:
             # Compute the local density matrix (if not previously cached)
@@ -1312,7 +1313,7 @@ If set to None, will be automatically generated from date (and random string).</
     n_neighbors = int(local_neighborhood_size * merged_spectra.shape[0] / k)
 
     # Rescale topics such to length of 1.
-    l2_spectra = (merged_spectra.T / np.sqrt((merged_spectra ** 2).sum(axis=1))).T
+    l2_spectra = (merged_spectra.T / np.sqrt((merged_spectra**2).sum(axis=1))).T
 
     if not skip_density_and_return_after_stats:
         # Compute the local density matrix (if not previously cached)
@@ -1658,7 +1659,7 @@ this many iterations will be run for each value of <code>k</code>.</dd>
     n_runs = len(ks) * n_iter
 
     np.random.seed(seed=random_state_seed)
-    nmf_seeds = np.random.randint(low=1, high=(2 ** 32) - 1, size=n_runs)
+    nmf_seeds = np.random.randint(low=1, high=(2**32) - 1, size=n_runs)
 
     replicate_params = []
     for i, (k, r) in enumerate(itertools.product(k_list, range(n_iter))):
@@ -1674,7 +1675,7 @@ this many iterations will be run for each value of <code>k</code>.</dd>
         solver=&#34;mu&#34;,
         tol=1e-4,
         max_iter=400,
-        alpha_H=None,
+        alpha_H=&#34;same&#34;,
         init=&#34;random&#34;,
     )
 
@@ -1701,7 +1702,7 @@ matching counts</dd>
 <dd>A pre-specified list of genes considered to be high-variance.
 Only these genes will be used during factorization of the counts matrix.
 Must match the .var index of counts and tpm.
-If set to None, high-variance genes will be automatically computed, using
+If set to <code>None</code>, high-variance genes will be automatically computed, using
 the parameters below.</dd>
 <dt><strong><code>num_highvar_genes</code></strong> :&ensp;<code>int</code>, optional <code>(default=None)</code></dt>
 <dd>Instead of providing an array of high-variance genes, identify this many
@@ -1723,35 +1724,28 @@ most overdispersed genes for filtering</dd>
     &#34;&#34;&#34;
     Parameters
     ----------
-
     counts : anndata.AnnData
         Scanpy AnnData object (cells x genes) containing raw counts. Filtered such
         that no genes or cells with 0 counts
-
     tpm : anndata.AnnData
         Scanpy AnnData object (cells x genes) containing tpm normalized data
         matching counts
-
     high_variance_genes_filter : np.array, optional (default=None)
         A pre-specified list of genes considered to be high-variance.
         Only these genes will be used during factorization of the counts matrix.
         Must match the .var index of counts and tpm.
-        If set to None, high-variance genes will be automatically computed, using
+        If set to `None`, high-variance genes will be automatically computed, using
         the parameters below.
-
     num_highvar_genes : int, optional (default=None)
         Instead of providing an array of high-variance genes, identify this many
         most overdispersed genes for filtering
 
     Returns
     -------
-
     normcounts : anndata.AnnData, shape (cells, num_highvar_genes)
         A counts matrix containing only the high variance genes and with columns
         (genes) normalized to unit variance
-
     &#34;&#34;&#34;
-
     if high_variance_genes_filter is None:
         ## Get list of high-var genes if one wasn&#39;t provided
         if sp.issparse(tpm.X):
@@ -1909,13 +1903,11 @@ defaults below::</p>
             random_state, n_components are both set by the prespecified
             self.paths[&#39;nmf_replicate_parameters&#39;].
 
-
     Parameters
     ----------
     norm_counts : pandas.DataFrame,
         Normalized counts dataFrame to be factorized.
         (Output of `normalize_counts`)
-
     run_params : pandas.DataFrame,
         Parameters for NMF iterations.
         (Output of `prepare_nmf_iter_params`)
