@@ -3,12 +3,16 @@
 Entire cNMF pipeline run in parallel using GNU parallel adapted from 
 (Kotliar, et al. 2019)
 """
+import os, sys
 import subprocess as sp
 from ._version import get_versions
 
 
 def parallel(args):
     argdict = vars(args)
+
+    # get location of `cnmf` executable from python bin
+    cnmf_exec = os.path.join(os.path.dirname(sys.executable), "cnmf")
 
     # convert arguments from list to string for passing to cnmf.py
     argdict["components"] = " ".join([str(k) for k in argdict["components"]])
@@ -29,7 +33,7 @@ def parallel(args):
         for k in argdict.keys()
         if (argdict[k] is not None) and not isinstance(argdict[k], bool)
     ]
-    prepare_cmd = "cnmf prepare {} ".format(counts_arg)
+    prepare_cmd = "{} prepare {} ".format(cnmf_exec, counts_arg)
     prepare_cmd += " ".join(prepare_opts)
     print("Preparing directories and preprocessing:  {}".format(prepare_cmd))
     sp.call(prepare_cmd, shell=True)
@@ -37,14 +41,15 @@ def parallel(args):
     # Run factorize
     workind = " ".join([str(x) for x in range(argdict["n_jobs"])])
     factorize_cmd = (
-        "nohup parallel cnmf factorize --output-dir %s --name %s --worker-index {} ::: %s"
-        % (argdict["output_dir"], argdict["name"], workind)
+        "nohup parallel %s factorize --output-dir %s --name %s --worker-index {} ::: %s"
+        % (cnmf_exec, argdict["output_dir"], argdict["name"], workind)
     )
     print("Running iterative NMF:  {}".format(factorize_cmd))
     sp.call(factorize_cmd, shell=True)
 
     # Run combine
-    combine_cmd = "cnmf combine --output-dir %s --name %s --components %s" % (
+    combine_cmd = "%s combine --output-dir %s --name %s --components %s" % (
+        cnmf_exec,
         argdict["output_dir"],
         argdict["name"],
         argdict["components"],
@@ -53,7 +58,8 @@ def parallel(args):
     sp.call(combine_cmd, shell=True)
 
     # Plot K selection
-    Kselect_cmd = "cnmf k_selection_plot --output-dir %s --name %s" % (
+    Kselect_cmd = "%s k_selection_plot --output-dir %s --name %s" % (
+        cnmf_exec,
         argdict["output_dir"],
         argdict["name"],
     )
@@ -69,7 +75,8 @@ def parallel(args):
     sp.call(clean_cmd, shell=True)
 
     if argdict["auto_k"]:
-        consensus_cmd = "cnmf consensus --output-dir {} --name {} --auto-k --local-density-threshold {} --local-neighborhood-size {}".format(
+        consensus_cmd = "{} consensus --output-dir {} --name {} --auto-k --local-density-threshold {} --local-neighborhood-size {}".format(
+            cnmf_exec,
             argdict["output_dir"],
             argdict["name"],
             local_dens_thresh_arg,
