@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Entire cNMF pipeline run in parallel using GNU parallel adapted from 
+Entire cNMF pipeline run in parallel using GNU parallel or SLURM, adapted from \
 (Kotliar, et al. 2019)
 """
 import os, sys
@@ -39,12 +39,27 @@ def parallel(args):
     sp.call(prepare_cmd, shell=True)
 
     # Run factorize
-    workind = " ".join([str(x) for x in range(argdict["n_jobs"])])
-    factorize_cmd = (
-        "nohup parallel %s factorize --output-dir %s --name %s --worker-index {} ::: %s"
-        % (cnmf_exec, argdict["output_dir"], argdict["name"], workind)
-    )
-    print("Running iterative NMF:  {}".format(factorize_cmd))
+    if argdict["slurm"]:
+        factorize_cmd = "sbatch --wait --ntasks={} --array=0-{} --output={}/{}/cnmf_tmp/factorize_slurm_job%a.out --error={}/{}/cnmf_tmp/factorize_slurm_job%a.err factorize_slurm {} {} {}".format(
+            argdict["n_jobs"],
+            argdict["n_jobs"] - 1,
+            argdict["output_dir"],
+            argdict["name"],
+            argdict["output_dir"],
+            argdict["name"],
+            cnmf_exec,
+            argdict["output_dir"],
+            argdict["name"],
+        )
+        print("Running iterative NMF using SLURM:  {}".format(factorize_cmd))
+    else:  # use GNU Parallel
+        workind = " ".join([str(x) for x in range(argdict["n_jobs"])])
+        factorize_cmd = (
+            "nohup parallel %s factorize --output-dir %s --name %s --worker-index {} \
+            ::: %s"
+            % (cnmf_exec, argdict["output_dir"], argdict["name"], workind)
+        )
+        print("Running iterative NMF using GNU Parallel:  {}".format(factorize_cmd))
     sp.call(factorize_cmd, shell=True)
 
     # Run combine
@@ -218,6 +233,11 @@ def main():
     parser.add_argument(
         "--cleanup",
         help="Remove excess files after saving results to clean workspace",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--slurm",
+        help="Use SLURM scheduler to parallelize jobs. Otherwise, use GNU Parallel.",
         action="store_true",
     )
 

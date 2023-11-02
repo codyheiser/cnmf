@@ -44,6 +44,7 @@ if __name__ == "__main__":
             "Topic :: Scientific/Engineering",
         ],
         python_requires=">=3.6",
+        scripts=["cNMF/factorize_slurm"],
         entry_points={
             "console_scripts": [
                 "cnmf = cNMF.cnmf:main",

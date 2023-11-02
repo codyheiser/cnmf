@@ -416,7 +416,8 @@ class cNMF:
 
         name : string, optional (default=None)
             A name for this analysis. Will be prefixed to all output files.
-            If set to None, will be automatically generated from date (and random string).
+            If set to None, will be automatically generated from date (and random
+            string).
         """
 
         self.output_dir = output_dir
@@ -619,7 +620,8 @@ class cNMF:
         zerocells = norm_counts.X.sum(axis=1) == 0
         if zerocells.sum() > 0:
             print(
-                "Warning: %d cells have zero counts of overdispersed genes - ignoring these cells for factorization."
+                "Warning: %d cells have zero counts of overdispersed genes - ignoring \
+                these cells for factorization."
                 % (zerocells.sum())
             )
             sc.pp.filter_cells(norm_counts, min_counts=1)
@@ -680,7 +682,8 @@ class cNMF:
             init="random",
         )
 
-        ## Coordinate descent is faster than multiplicative update but only works for frobenius
+        # Coordinate descent is faster than multiplicative update but only works for
+        # frobenius
         if beta_loss == "frobenius":
             _nmf_kwargs["solver"] = "cd"
 
@@ -749,7 +752,6 @@ class cNMF:
             range(len(run_params)), worker_i, total_workers
         )
         for idx in jobs_for_this_worker:
-
             p = run_params.iloc[idx, :]
             print("[Worker %d]. Starting task %d." % (worker_i, idx))
             _nmf_kwargs["random_state"] = p["nmf_seed"]
@@ -778,7 +780,6 @@ class cNMF:
         spectra_labels = []
 
         for i, p in run_params_subset.iterrows():
-
             spectra = load_df_from_npz(
                 self.paths["iter_spectra"] % (p["n_components"], p["iter"])
             )
@@ -830,7 +831,8 @@ class cNMF:
                 partitioning_order = np.argpartition(topics_dist, n_neighbors + 1)[
                     :, : n_neighbors + 1
                 ]
-                #   find the mean over those n_neighbors (excluding self, which has a distance of 0)
+                #   find the mean over those n_neighbors (excluding self, which has a
+                #   distance of 0)
                 distance_to_nearest_neighbors = topics_dist[
                     np.arange(topics_dist.shape[0])[:, None], partitioning_order
                 ]
@@ -863,7 +865,8 @@ class cNMF:
             l2_spectra.values, kmeans_cluster_labels, metric="euclidean"
         )
 
-        # Obtain the reconstructed count matrix by re-fitting the usage matrix and computing the dot product: usage.dot(spectra)
+        # Obtain the reconstructed count matrix by re-fitting the usage matrix and
+        # computing the dot product: usage.dot(spectra)
         refit_nmf_kwargs = yaml.load(
             open(self.paths["nmf_run_parameters"]), Loader=yaml.FullLoader
         )
@@ -980,7 +983,6 @@ class cNMF:
 
             spectra_order = []
             for cl in sorted(set(kmeans_cluster_labels)):
-
                 cl_filter = kmeans_cluster_labels == cl
 
                 if cl_filter.sum() > 1:
@@ -1096,7 +1098,8 @@ class cNMF:
                 )
             hist_ax.set_xlim(xlim)
             hist_ax.set_xlabel(
-                "Mean distance to k nearest neighbors\n\n%d/%d (%.0f%%) spectra above threshold\nwere removed prior to clustering"
+                "Mean distance to k nearest neighbors\n\n%d/%d (%.0f%%) spectra above \
+                threshold\nwere removed prior to clustering"
                 % (
                     sum(~density_filter),
                     len(density_filter),
@@ -1118,7 +1121,6 @@ class cNMF:
         run_params = load_df_from_npz(self.paths["nmf_replicate_parameters"])
         stats = []
         for k in sorted(set(run_params.n_components)):
-
             stats.append(
                 self.consensus(k, skip_density_and_return_after_stats=True).stats
             )
@@ -1400,19 +1402,22 @@ def main():
         "counts",
         type=str,
         nargs="?",
-        help="Input (cell x gene) counts matrix as .h5ad, df.npz, or tab delimited text file",
+        help="Input (cell x gene) counts matrix as .h5ad, df.npz, or tab delimited \
+        text file",
     )
     prepare_parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... \
+        Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     prepare_parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... \
+        Default '.'",
         nargs="?",
         default=".",
     )
@@ -1427,7 +1432,8 @@ def main():
         "-k",
         "--components",
         type=int,
-        help='Number of components (k) for matrix factorization. Several can be specified with "-k 8 9 10". Default range(7,18).',
+        help='Number of components (k) for matrix factorization. Several can be \
+        specified with "-k 8 9 10". Default range(7,18).',
         nargs="*",
         default=[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
     )
@@ -1440,7 +1446,8 @@ def main():
     )
     prepare_parser.add_argument(
         "--subset",
-        help="AnnData.obs column name to subset on before performing NMF. Cells to keep should be True or 1.",
+        help="AnnData.obs column name to subset on before performing NMF. Cells to \
+        keep should be True or 1.",
         nargs="*",
     )
     prepare_parser.add_argument(
@@ -1454,7 +1461,8 @@ def main():
         "--gene-symbol-col",
         type=str,
         default=None,
-        help="Replace `adata.var_names` with values from `adata.var[gene_symbol_col]` (i.e. to switch symbol for Ensembl ID)",
+        help="Replace `adata.var_names` with values from `adata.var[gene_symbol_col]` \
+        (i.e. to switch symbol for Ensembl ID)",
     )
     prepare_parser.add_argument(
         "--seed",
@@ -1465,19 +1473,22 @@ def main():
     prepare_parser.add_argument(
         "--genes-file",
         type=str,
-        help="File containing a list of genes to include, one gene per line. Must match column labels of counts matrix.",
+        help="File containing a list of genes to include, one gene per line. Must \
+        match column labels of counts matrix.",
         default=None,
     )
     prepare_parser.add_argument(
         "--numgenes",
         type=int,
-        help="Number of high variance genes to use for matrix factorization. Default 2000.",
+        help="Number of high variance genes to use for matrix factorization. Default \
+        2000.",
         default=2000,
     )
     prepare_parser.add_argument(
         "--tpm",
         type=str,
-        help="Pre-computed (cell x gene) TPM values as df.npz or tab separated txt file. If not provided TPM will be calculated automatically",
+        help="Pre-computed (cell x gene) TPM values as df.npz or tab separated txt \
+        file. If not provided TPM will be calculated automatically",
         default=None,
     )
     prepare_parser.add_argument(
@@ -1503,14 +1514,16 @@ def main():
     factorize_parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... \
+        Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     factorize_parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... \
+        Default '.'",
         nargs="?",
         default=".",
     )
@@ -1524,26 +1537,30 @@ def main():
     factorize_parser.add_argument(
         "--worker-index",
         type=int,
-        help="Index of current worker (the first worker should have index 0). Default 0.",
+        help="Index of current worker (the first worker should have index 0). Default \
+        0.",
         default=0,
     )
     factorize_parser.set_defaults(func=factorize)
 
     combine_parser = subparsers.add_parser(
         "combine",
-        help="Combine factors from NMF iterations and calculate stats for choosing consensus.",
+        help="Combine factors from NMF iterations and calculate stats for choosing \
+        consensus.",
     )
     combine_parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... \
+        Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     combine_parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... \
+        Default '.'",
         nargs="?",
         default=".",
     )
@@ -1551,7 +1568,8 @@ def main():
         "-k",
         "--components",
         type=int,
-        help='Number of components (k) for matrix factorization. Several can be specified with "-k 8 9 10". Default range(7,18).',
+        help='Number of components (k) for matrix factorization. Several can be \
+        specified with "-k 8 9 10". Default range(7,18).',
         nargs="*",
         default=[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
     )
@@ -1564,14 +1582,16 @@ def main():
     consensus_parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... \
+        Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     consensus_parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... \
+        Default '.'",
         nargs="?",
         default=".",
     )
@@ -1579,7 +1599,8 @@ def main():
         "-k",
         "--components",
         type=int,
-        help='Numper of components (k) for matrix factorization. Several can be specified with "-k 8 9 10". Default range(7,18).',
+        help='Numper of components (k) for matrix factorization. Several can be \
+        specified with "-k 8 9 10". Default range(7,18).',
         nargs="*",
         default=[7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
     )
@@ -1591,13 +1612,15 @@ def main():
     consensus_parser.add_argument(
         "--local-density-threshold",
         type=str,
-        help="Threshold for the local density filtering. This string must convert to a float >0 and <=2. Default 0.1.",
+        help="Threshold for the local density filtering. This string must convert to \
+        a float >0 and <=2. Default 0.1.",
         default="0.1",
     )
     consensus_parser.add_argument(
         "--local-neighborhood-size",
         type=float,
-        help="Fraction of the number of replicates to use as nearest neighbors for local density filtering. Default 0.3.",
+        help="Fraction of the number of replicates to use as nearest neighbors for \
+        local density filtering. Default 0.3.",
         default=0.30,
     )
     consensus_parser.add_argument(
@@ -1614,14 +1637,16 @@ def main():
     k_selection_parser.add_argument(
         "--name",
         type=str,
-        help="Name for analysis. All output will be placed in [output-dir]/[name]/... Default 'cNMF'",
+        help="Name for analysis. All output will be placed in [output-dir]/[name]/... \
+        Default 'cNMF'",
         nargs="?",
         default="cNMF",
     )
     k_selection_parser.add_argument(
         "--output-dir",
         type=str,
-        help="Output directory. All output will be placed in [output-dir]/[name]/... Default '.'",
+        help="Output directory. All output will be placed in [output-dir]/[name]/... \
+        Default '.'",
         nargs="?",
         default=".",
     )
