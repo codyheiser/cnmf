@@ -1,0 +1,12 @@
+[flake8]
+max-line-length = 88
+exclude = 
+    __pycache__,
+    .ipynb_checkpoints
+ignore = 
+    E203,
+    E266,
+    E501,
+    W503
+count = True
+statistics = True
