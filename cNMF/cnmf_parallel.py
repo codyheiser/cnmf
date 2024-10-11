@@ -3,7 +3,8 @@
 Entire cNMF pipeline run in parallel using GNU parallel or SLURM, adapted from \
 (Kotliar, et al. 2019)
 """
-import os, sys
+import os
+import sys
 import subprocess as sp
 from ._version import get_versions
 

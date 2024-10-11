@@ -4,7 +4,8 @@ Consensus non-negative matrix factorization (cNMF) adapted from (Kotliar, et al.
 """
 import numpy as np
 import pandas as pd
-import os, errno
+import errno
+import os
 import glob
 import datetime
 import uuid
@@ -580,7 +581,7 @@ class cNMF:
             (genes) normalized to unit variance
         """
         if high_variance_genes_filter is None:
-            ## Get list of high-var genes if one wasn't provided
+            # Get list of high-var genes if one wasn't provided
             if sp.issparse(tpm.X):
                 (gene_counts_stats, gene_fano_params) = get_highvar_genes_sparse(
                     tpm.X, numgenes=num_highvar_genes
@@ -594,14 +595,14 @@ class cNMF:
                 tpm.var.index[gene_counts_stats.high_var.values]
             )
 
-        ## Subset out high-variance genes
+        # Subset out high-variance genes
         print(
             "Selecting {} highly variable genes".format(len(high_variance_genes_filter))
         )
         norm_counts = counts[:, high_variance_genes_filter]
         norm_counts = norm_counts[tpm.obs_names, :].copy()
 
-        ## Scale genes to unit variance
+        # Scale genes to unit variance
         if sp.issparse(tpm.X):
             sc.pp.scale(norm_counts, zero_center=False)
             if np.isnan(norm_counts.X.data).sum() > 0:
@@ -611,12 +612,12 @@ class cNMF:
             if np.isnan(norm_counts.X).sum().sum() > 0:
                 print("Warning: NaNs in normalized counts matrix")
 
-        ## Save a \n-delimited list of the high-variance genes used for factorization
+        # Save a \n-delimited list of the high-variance genes used for factorization
         open(self.paths["nmf_genes_list"], "w").write(
             "\n".join(high_variance_genes_filter)
         )
 
-        ## Check for any cells that have 0 counts of the overdispersed genes
+        # Check for any cells that have 0 counts of the overdispersed genes
         zerocells = norm_counts.X.sum(axis=1) == 0
         if zerocells.sum() > 0:
             print(
@@ -995,7 +996,7 @@ class cNMF:
 
                     spectra_order += list(np.where(cl_filter)[0][cl_leaves_order])
                 else:
-                    ## Corner case where a component only has one element
+                    # Corner case where a component only has one element
                     spectra_order += list(np.where(cl_filter)[0])
 
             from matplotlib import gridspec
