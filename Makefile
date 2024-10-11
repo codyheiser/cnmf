@@ -22,6 +22,6 @@ doc:
 	rm -r $(DOCS_DIR)/cNMF/
 
 # run all tasks
-all: lint format docs
+all: lint format doc
 
 .PHONY: lint format doc all
